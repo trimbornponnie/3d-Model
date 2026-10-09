@@ -397,12 +397,14 @@ def _hollow(ctx, body, volumes):
 
 def _lining_cutter(recs, depth=0.60):
     """joinery.lining_cutter, 0.60 deep instead of 1.2 (the linings lie at
-    d 0.28 - 0.45 behind the outer faces): the openings and their pockets."""
+    d 0.28 - 0.45 behind the outer faces): the openings and what the joinery
+    passes through the lining (joinery.lining_boxes; the boards of the
+    finestre tipo and two-light pairs, built here by sill_and_board, too)."""
     bm = bmesh.new()
     for r in recs:
         kind = J.classify(r)
         geo.Face(r['axis'], r['coord'], r['out']).solid(bm, r['outline'], depth, outside=0.3)
-        for u0, u1, z0, z1, d0, d1 in J.pockets(r, kind):
+        for u0, u1, z0, z1 in J.lining_boxes(r, kind, board=True if kind in ('N_E', 'N_E1P') else None):
             I.face_box(bm, r, u0, u1, z0, z1, J.WALL - 0.02, depth)
     return bm
 

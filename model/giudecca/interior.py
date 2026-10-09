@@ -41,6 +41,10 @@ class Kit:
 
     def __call__(self, element: str, mat: str, **props) -> bmesh.types.BMesh:
         name = self.name(element)
+        if name in self.items and self.items[name][1] != mat:
+            # same element in a second material (steel stair windows among timber
+            # ones, grey cellar doors): its own object, named after the material
+            name = self.name(element + mat.replace('M_', '', 1))
         if name not in self.items:
             self.items[name] = (bmesh.new(), mat, props)
         return self.items[name][0]

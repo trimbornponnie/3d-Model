@@ -238,9 +238,37 @@ def add_pockets(bm, recs: Sequence[dict]) -> None:
             _box(bm, fr, u0, u1, z0, z1, d0, d1)
 
 
+def lining_boxes(rec: dict, kind: str | None = None, board: bool | None = None
+                 ) -> list[tuple[float, float, float, float]]:
+    """Rectangles (u0, u1, z0, z1) the joinery passes through the wall lining
+    besides the opening itself: the frame pocket behind a stop jamb (reveal
+    plaster), the window board (`board` overrides the type's flag, for part
+    modules that build their own boards), the radiator niche and the
+    threshold. The lintel and the inner sill block stay behind the lining -
+    cutting their pockets too left bands of bare concrete and cut insulation
+    round every window."""
+    kind = kind or classify(rec)
+    if kind is None:
+        return []
+    s = spec_for(kind)
+    u0, u1, z0, z1 = dims(rec)
+    zf = floor_of(z0)
+    stop = s['jamb'] == 'stop' and rec['kind'] == 'rect'
+    out = []
+    if stop:
+        out.append((u0 - MAZ, u1 + MAZ, z0, z1 + MAZ))
+    if (s['board'] if board is None else board) and not s['door'] and rec['kind'] == 'rect' and z0 - zf > 0.5:
+        out.append((u0 - MAZ - 0.02, u1 + MAZ + 0.02, z0 - 0.025, z0) if stop else (u0 - 0.02, u1 + 0.02, z0 - 0.025, z0))
+    if s['niche'] and rec['kind'] == 'rect':
+        out.append((u0 - MAZ, u1 + MAZ, zf, z0 - 0.13))
+    if s['door'] and kind in ('C', 'D') and z0 - zf > 0.01:
+        out.append((u0 - MAZ, u1 + MAZ, zf - 0.02, z0))
+    return out
+
+
 def lining_cutter(recs: Sequence[dict]) -> bmesh.types.BMesh:
-    """Cutter for the wall linings round these openings: the opening and its
-    pockets, from 0.3 m in front of the wall to 1.2 m behind it."""
+    """Cutter for the wall linings round these openings: the opening and
+    lining_boxes(), from 0.3 m in front of the wall to 1.2 m behind it."""
     bm = bmesh.new()
     for r in recs:
         kind = classify(r)
@@ -248,7 +276,7 @@ def lining_cutter(recs: Sequence[dict]) -> bmesh.types.BMesh:
             continue
         fr = Frame3(r)
         geo.Face(r['axis'], r['coord'], r['out']).solid(bm, r['outline'], 1.2, outside=0.3)
-        for u0, u1, z0, z1, d0, d1 in pockets(r, kind):
+        for u0, u1, z0, z1 in lining_boxes(r, kind):
             _box(bm, fr, u0, u1, z0, z1, WALL - 0.02, 1.2)
     return bm
 
@@ -299,14 +327,16 @@ def opening(kit: Kit, rec: dict, kind: str, prefix: str = 'Window') -> None:
         if s['handle']:
             hb = kit(f'{prefix}Handles', 'M_Steel')
             uh = (iu0 + iu1) / 2 if n == 2 else iu1 - sw / 2
-            zh = min(zf + 1.05, (iz0 + iz1) / 2 + 0.3) if not s['door'] else zf + 1.05
+            # windows: mid-sash (floor + 1.05 fell on the bottom rail of the
+            # finestre tipo and under the sash of the high-sill windows)
+            zh = (iz0 + iz1) / 2 if not s['door'] else zf + 1.05
             _box(hb, fr, uh - 0.012, uh + 0.012, zh - 0.07, zh + 0.07, ds + sd, ds + sd + 0.012)
             _box(hb, fr, uh - 0.012, uh + 0.012, zh - 0.10, zh + 0.012, ds + sd + 0.012, ds + sd + 0.06)
     # reveal plaster behind a stop jamb: pocket jambs and head, frame -> finished face
     if stop:
         rp = kit(f'{prefix}Reveals', 'M_PlasterInt')
         da, db = d0 + fd, FINISH
-        t = MAZ - fw - 0.002
+        t = MAZ - fw                     # flush with the frame's outer side
         _box(rp, fr, u0 - MAZ, u0 - MAZ + t, z0, z1 + MAZ, da, db)
         _box(rp, fr, u1 + MAZ - t, u1 + MAZ, z0, z1 + MAZ, da, db)
         _box(rp, fr, u0 - MAZ, u1 + MAZ, z1 + MAZ - t, z1 + MAZ, da, db)
@@ -322,14 +352,16 @@ def opening(kit: Kit, rec: dict, kind: str, prefix: str = 'Window') -> None:
             _box(lb, fr, u0 - 0.12, u1 + 0.12, z1, z1 + 0.13, 0.05, WALL)
     if not s['door'] and s['board'] and z0 - zf > 0.5:
         # inner part of the RC sill, and the cream timber window board on it (n24)
+        # (the side pieces stop at the board's ends, the piece under the board at
+        # its underside: no coplanar tops, no overlap)
         sb = kit('SillBlocks', 'M_Concrete')
+        ub0, ub1 = (u0 - MAZ - 0.02, u1 + MAZ + 0.02) if stop else (u0 - 0.02, u1 + 0.02)
         _box(sb, fr, u0 - 0.12, u1 + 0.12, z0 - 0.13, z0, 0.115, d0 if stop else WALL)
         if stop:
-            _box(sb, fr, u0 - 0.12, u0 - MAZ, z0 - 0.13, z0, d0, WALL)
-            _box(sb, fr, u1 + MAZ, u1 + 0.12, z0 - 0.13, z0, d0, WALL)
-            _box(sb, fr, u0 - MAZ, u1 + MAZ, z0 - 0.13, z0 - 0.025, d0, WALL)
+            _box(sb, fr, u0 - 0.12, ub0, z0 - 0.13, z0, d0, WALL)
+            _box(sb, fr, ub1, u1 + 0.12, z0 - 0.13, z0, d0, WALL)
+            _box(sb, fr, ub0, ub1, z0 - 0.13, z0 - 0.025, d0, WALL)
         wb = kit(f'{prefix}Boards', 'M_Joinery')
-        ub0, ub1 = (u0 - MAZ - 0.02, u1 + MAZ + 0.02) if stop else (u0 - 0.02, u1 + 0.02)
         _box(wb, fr, ub0, ub1, z0 - 0.025, z0, (d0 + fd) if stop else WALL + 0.06, FINISH + 0.02)
     if s['niche']:
         # radiator niche: the inner brick stops under the sill; the lining runs on its back
@@ -366,7 +398,11 @@ def _door_leaf(kit, fr, s, u0, u1, z0, z1, ds, zf, prefix):
         for c, d in ((zl0, zl1), (zu0, zu1)):
             _box(pb, fr, a, b, c, d, ds + 0.010, ds + t - 0.010)                            # raised panel
     hb = kit(f'{prefix}Handles', 'M_Steel')
-    _box(hb, fr, um - 0.03, um + 0.03, zf + 0.94 - 0.03, zf + 0.94 + 0.03, ds - 0.03, ds)    # central knob at ~0.94
+    _box(hb, fr, um - 0.03, um + 0.03, zf + 0.94 - 0.03, zf + 0.94 + 0.03, ds - 0.03, ds + 0.001)  # central knob at ~0.94
+    # inside: lever handle on the lock stile at 1.05, on a rose
+    uh, zh, di = u1 - st / 2, zf + 1.05, ds + t
+    _box(hb, fr, uh - 0.025, uh + 0.025, zh - 0.08, zh + 0.025, di, di + 0.010)
+    _box(hb, fr, uh - 0.12, uh + 0.012, zh - 0.011, zh + 0.011, di + 0.010, di + 0.055)
 
 
 def _street_door(kit, fr, s, u0, u1, z0, z1, ds, zf, prefix):
