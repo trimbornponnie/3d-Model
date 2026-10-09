@@ -35,10 +35,22 @@ PALETTE = {
     'M_Foliage': ((74, 98, 50), 0.0, 0.95),
     'M_Bark': ((86, 70, 56), 0.0, 0.9),
     'M_Wood': ((112, 94, 74), 0.0, 0.85),         # weathered oak mooring poles
+    # interiors and construction layers (docs/INTERIORS.md)
+    'M_Parquet': ((176, 128, 82), 0.0, 0.45),     # oak herringbone parquet (interior floor finish)
+    'M_PlasterInt': ((236, 232, 224), 0.0, 0.9),  # interior lime plaster, painted
+    'M_Insulation': ((222, 200, 118), 0.0, 1.0),  # thermal / acoustic insulation
+    'M_Screed': ((172, 168, 160), 0.0, 0.95),     # cement screed ("massetto")
+    'M_Structure': ((150, 148, 142), 0.0, 0.9),   # reinforced concrete / laterocemento slabs, ring beams
+    'M_HollowBrick': ((186, 110, 82), 0.0, 0.9),  # hollow clay blocks ("laterizio forato"), partitions
+    'M_Membrane': ((40, 40, 42), 0.0, 0.6),       # bituminous waterproofing / vapour barrier
+    'M_DoorLeaf': ((168, 132, 92), 0.0, 0.55),    # interior door leaves (wood)
+    'M_DoorFrame': ((150, 116, 80), 0.0, 0.55),   # interior door casings and architraves
+    'M_StairTread': ((214, 206, 190), 0.0, 0.5),  # stair treads and landings
+    'M_Steel': ((58, 60, 62), 0.6, 0.4),          # handrails, balustrades
 }
 
 # material -> generator of its base-colour image (T_<Asset>_D, textures.py)
-TEXTURES = {'M_Brick': textures.brick, 'M_RoofTile': textures.roof_tile}
+TEXTURES = {'M_Brick': textures.brick, 'M_RoofTile': textures.roof_tile, 'M_Parquet': textures.parquet}
 
 
 def srgb_to_linear(c: int) -> float:

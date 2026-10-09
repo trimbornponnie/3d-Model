@@ -132,20 +132,27 @@ class Openings:
         self.glass_name = glass_name or f'{target.name}_Glass'
         self.col = col
 
-    def rect(self, face, along, dm, z0, w, h, through=None, pane=True, recess=0.0):
-        geo.opening(face, self.cut, self.panes, u_on(face, along, dm), z0, w, h,
-                    through=through, pane=pane, recess=recess)
+    def rect(self, face, along, dm, z0, w, h, through=None, pane=True, recess=0.0, keep_recess=False):
+        rec = geo.opening(face, self.cut, self.panes, u_on(face, along, dm), z0, w, h,
+                          through=through, pane=pane, recess=recess, keep_recess=keep_recess)
+        rec['target'] = self.target.name
+        return rec
 
     def arch(self, face, along, dm, z0, w, spring, crown, through=None, pane=True):
-        geo.opening(face, self.cut, self.panes, u_on(face, along, dm), z0, w,
-                    crown - z0, arch_rise=crown - spring, through=through, pane=pane)
+        rec = geo.opening(face, self.cut, self.panes, u_on(face, along, dm), z0, w,
+                          crown - z0, arch_rise=crown - spring, through=through, pane=pane)
+        rec['target'] = self.target.name
+        return rec
 
     def outline(self, face, outline_uz, depth):
-        """Arbitrary (u, z) cutter outline (world u)."""
+        """Arbitrary (u, z) cutter outline (world u) - a tunnel or pocket, not
+        an opening for the joinery (not registered)."""
         face.solid(self.cut, outline_uz, depth)
 
     def round(self, face, along, dm, zc, d):
-        geo.round_window(face, self.cut, self.panes, u_on(face, along, dm), zc, d)
+        rec = geo.round_window(face, self.cut, self.panes, u_on(face, along, dm), zc, d)
+        rec['target'] = self.target.name
+        return rec
 
     def apply(self):
         geo.boolean_difference(self.target, self.cut, self.ctx.cutters)

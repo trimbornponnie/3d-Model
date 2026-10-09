@@ -74,7 +74,7 @@ def prepare_for_export(mesh_objs) -> dict:
 
 
 # ---------------------------------------------------------------- per object
-def _shell_volumes(bm) -> list[float]:
+def _shell_volumes(bm) -> list[tuple[float, tuple, tuple]]:
     """Signed volume of every closed connected shell (negative = inward normals)."""
     seen, vols = set(), []
     for f0 in bm.faces:
@@ -95,13 +95,35 @@ def _shell_volumes(bm) -> list[float]:
         if not closed:
             continue
         vol = 0.0
+        pts = []
         for f in comp:
             co = [v.co for v in f.verts]
+            pts += co
             a = co[0]
             for k in range(1, len(co) - 1):
                 vol += a.dot(co[k].cross(co[k + 1]))
-        vols.append(vol / 6.0)
+        lo = tuple(min(p[i] for p in pts) for i in range(3))
+        hi = tuple(max(p[i] for p in pts) for i in range(3))
+        vols.append((vol / 6.0, lo, hi))
     return vols
+
+
+def _inverted(shells) -> tuple[int, int]:
+    """(inverted shells, cavities): a closed shell with negative volume is a
+    cavity - a room enclosed by masonry, faces pointing into it - when it lies
+    inside a positive shell of the same object (bounding boxes, 1 mm
+    tolerance); otherwise it is an inverted shell."""
+    inv = cav = 0
+    pos = [(lo, hi) for v, lo, hi in shells if v > 1e-9]
+    for v, lo, hi in shells:
+        if v >= -1e-9:
+            continue
+        inside = any(all(plo[i] - 1e-3 <= lo[i] and hi[i] <= phi[i] + 1e-3 for i in range(3)) for plo, phi in pos)
+        if inside:
+            cav += 1
+        else:
+            inv += 1
+    return inv, cav
 
 
 def stats(obj) -> dict:
@@ -116,6 +138,7 @@ def stats(obj) -> dict:
         elif 2 * a / max(e.calc_length() for e in f.edges) < SLIVER_H:
             slivers += 1
     vols = _shell_volumes(bm)
+    inv, cav = _inverted(vols)
     me = obj.data
     res = {
         'faces': len(bm.faces),
@@ -127,7 +150,8 @@ def stats(obj) -> dict:
         'zero_area_faces': zero,
         'slivers': slivers,
         'flipped_edges': sum(1 for e in bm.edges if e.is_manifold and not e.is_contiguous),
-        'inverted_shells': sum(1 for v in vols if v < -1e-9),
+        'inverted_shells': inv,
+        'cavities': cav,
         'shells': len(vols),
         'uv_maps': len(me.uv_layers),
         'faces_without_material': sum(1 for p in me.polygons

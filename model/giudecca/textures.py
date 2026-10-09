@@ -10,6 +10,7 @@ follow the skill's convention: T_<Asset>_D (diffuse / base colour).
   7.0), lime mortar joints ~8 mm.
 - T_RoofTile_D: clay tiles ("tegole", SE 54), 5 per metre across the slope and
   3 courses per metre down it, shaded at each course's lower edge.
+- T_Parquet_D: oak herringbone parquet, staves 5 x 25 cm (interior floors).
 """
 from __future__ import annotations
 
@@ -80,6 +81,46 @@ def roof_tile(out_dir: str | None = None, seed: int = 11) -> bpy.types.Image:
     rgb *= (0.90 + 0.10 * np.sin(np.pi * fx))[..., None]               # tile camber
     rgb *= (1.0 + rng.normal(0.0, 0.03, size=(SIZE, SIZE, 1)).astype(np.float32))
     return _save('T_RoofTile_D', rgb, out_dir)
+
+
+def parquet(out_dir: str | None = None, seed: int = 23) -> bpy.types.Image:
+    """Oak herringbone parquet ("spina di pesce"), staves 5 x 25 cm.
+
+    Drawn axis-aligned on a grid of 5 cm cells: cell (c, r) with
+    d = (c - r) mod 10 belongs to a horizontal stave starting at c - d when
+    d < 5, else to a vertical stave starting at row r - (9 - d). The pattern
+    repeats every 0.5 m in both directions, so the 1 m tile is seamless. The
+    floors' UVs are turned 45 deg (geo.world_box_uv, uv_rotate), which sets
+    the staves at 45 deg to the walls with the spine parallel to them."""
+    rng = np.random.default_rng(seed)
+    n, cells = 5, 20                                   # stave 5:1, 20 cells per metre
+    cw = SIZE / cells
+    y, x = np.mgrid[0:SIZE, 0:SIZE].astype(np.float32)
+    c, r = np.floor(x / cw).astype(int), np.floor(y / cw).astype(int)
+    fx, fy = (x % cw) / cw, (y % cw) / cw              # 0..1 inside the cell
+    d = (c - r) % (2 * n)
+    horiz = d < n
+    # stave id (start cell) and position along / across the stave
+    sc = np.where(horiz, c - d, c) % cells
+    sr = np.where(horiz, r, r - (2 * n - 1 - d)) % cells
+    along = np.where(horiz, d + fx, (2 * n - 1 - d) + fy) / n          # 0..1 along the stave
+    across = np.where(horiz, fy, fx)                                    # 0..1 across
+    sid = sr * cells + sc
+    tone = rng.normal(1.0, 0.07, size=cells * cells).astype(np.float32)[sid]
+    warm = rng.normal(0.0, 0.025, size=cells * cells).astype(np.float32)[sid]
+    phase = rng.uniform(0, 50, size=cells * cells).astype(np.float32)[sid]
+    base = _srgb((176, 128, 82))                                        # oiled oak
+    rgb = base[None, None, :] * tone[..., None]
+    rgb += (warm[..., None] * np.array([1.0, 0.6, 0.3], dtype=np.float32))
+    # grain: fine stripes along the stave, wavering slightly
+    g = np.sin(2 * np.pi * (across * 9.0 + 0.35 * np.sin(2 * np.pi * (along * 1.3) + phase) + phase))
+    rgb *= (1.0 + 0.045 * g)[..., None]
+    rgb *= (1.0 + rng.normal(0.0, 0.025, size=(SIZE, SIZE, 1)).astype(np.float32))
+    # 1 mm dark joints round every stave
+    j = 1.0 / 50.0 * cells / 20.0                                       # ~1 mm in cell units
+    edge = (across < j * 1.0) | (across > 1 - j * 1.0) | (along * n < j) | (along * n > n - j)
+    rgb = np.where(edge[..., None], rgb * 0.55, rgb)
+    return _save('T_Parquet_D', rgb, out_dir)
 
 
 def attach(mat: bpy.types.Material, image: bpy.types.Image) -> None:

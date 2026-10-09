@@ -183,7 +183,12 @@ class Cuts(Openings):
         box_EY(self.cut, E0, E1, Y0, Y1, z0, z1)
 
     def poly(self, face, outline, depth=0.16, pane=True, inset=0.12):
-        """Recess of any (u, z) outline with a 2 cm glass pane at `inset`."""
+        """Recess of any (u, z) outline with a 2 cm glass pane at `inset`
+        (with geo.THROUGH set: cut through, no pane - the joinery glazes it)."""
+        rec = geo.register(face, outline, 'poly', recess=depth, pane=pane, glass_inset=inset)
+        rec['target'] = self.target.name
+        if geo.THROUGH is not None:
+            depth, pane = geo.THROUGH, False
         face.solid(self.cut, outline, depth)
         if pane:
             cu = sum(p[0] for p in outline) / len(outline)

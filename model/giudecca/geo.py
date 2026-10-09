@@ -154,21 +154,46 @@ class Face:
         return Vector((c, u, z)) if self.axis == 'x' else Vector((u, c, z))
 
 
+# ------------------------------------------------------------ openings registry
+# Every window, door and oculus cut by opening() / round_window() (and by the
+# modules' own recess cutters through register()) is recorded here, so the
+# joinery (frames, sashes, glass, sills) and the interiors can be built from
+# one list after the parts. With THROUGH set (interiors on), these openings are
+# cut THROUGH deep from the outer face - right through the wall - and get no
+# plain glass pane: the joinery puts the glazing in.
+OPENINGS: list[dict] = []
+THROUGH: float | None = None
+
+
+def register(face: Face, outline, kind: str, **info) -> dict:
+    """Record one opening on `face` (outline in the face's (u, z) plane)."""
+    rec = dict(axis=face.axis, coord=face.coord, out=face.out,
+               outline=[(float(u), float(z)) for u, z in outline], kind=kind, target=None, **info)
+    OPENINGS.append(rec)
+    return rec
+
+
 def opening(face: Face, cutters_bm, panes_bm, u: float, z0: float, width: float,
             height: float, arch_rise: float = 0.0, recess: float = 0.0,
             through: float | None = None, pane: bool = True,
-            glass_inset: float = 0.12) -> None:
-    """Add one opening on `face`.
+            glass_inset: float = 0.12, keep_recess: bool = False) -> dict:
+    """Add one opening on `face`; returns its OPENINGS record.
 
     - through=None: a recess `recess` deep (or 0.25 m default) with a glass pane
-      at its back - used for windows/doors of closed volumes;
+      at its back - used for windows/doors of closed volumes (with THROUGH set:
+      cut THROUGH deep and no pane, unless keep_recess, for blind niches);
     - through=<wall thickness>: cut right through (arcades, passages).
     The outline is a rectangle, or rectangle + segmental arch when arch_rise > 0.
     """
     z_spring = z0 + height - arch_rise
     outline = arch_profile(u, width, z_spring, arch_rise, z0) if arch_rise > EPS else [
         (u - width / 2, z0), (u + width / 2, z0), (u + width / 2, z0 + height), (u - width / 2, z0 + height)]
+    rec = register(face, outline, 'arch' if arch_rise > EPS else 'rect', u=u, z0=z0, width=width,
+                   height=height, arch_rise=arch_rise, recess=recess, through=through, pane=pane,
+                   glass_inset=glass_inset, keep_recess=keep_recess)
     depth = through + 0.2 if through is not None else max(recess, glass_inset + 0.04)
+    if through is None and THROUGH is not None and not keep_recess:
+        depth, pane = THROUGH, False
     face.solid(cutters_bm, outline, depth)
     if pane and through is None:
         # glass sheet 2 cm thick at the back of the recess, slightly inside the cut
@@ -181,11 +206,16 @@ def opening(face: Face, cutters_bm, panes_bm, u: float, z0: float, width: float,
             add_prism_x(panes_bm, o, min(a, b), max(a, b))
         else:
             add_prism_y(panes_bm, o, min(a, b), max(a, b))
+    return rec
 
 
 def round_window(face: Face, cutters_bm, panes_bm, u: float, zc: float, diameter: float,
-                 recess: float = 0.18) -> None:
+                 recess: float = 0.18) -> dict:
     prof = circle_profile(u, zc, diameter / 2)
+    rec = register(face, prof, 'round', u=u, zc=zc, diameter=diameter, recess=recess)
+    if THROUGH is not None:
+        face.solid(cutters_bm, prof, THROUGH)
+        return rec
     face.solid(cutters_bm, prof, recess)
     prof_in = circle_profile(u, zc, diameter / 2 - 0.003)
     a = face.coord - face.out * (recess - 0.04)
@@ -194,6 +224,7 @@ def round_window(face: Face, cutters_bm, panes_bm, u: float, zc: float, diameter
         add_prism_x(panes_bm, prof_in, min(a, b), max(a, b))
     else:
         add_prism_y(panes_bm, prof_in, min(a, b), max(a, b))
+    return rec
 
 
 # --------------------------------------------------------------------- boolean
@@ -260,10 +291,12 @@ def apply_modifiers(obj: bpy.types.Object) -> None:
     me.name = obj.name             # keep mesh names free of .001 suffixes in exports
 
 
-def cleanup(obj: bpy.types.Object, dist: float = EPS) -> None:
+def cleanup(obj: bpy.types.Object, dist: float = EPS, recalc: bool = True) -> None:
     """Merge by distance, delete loose geometry, dissolve degenerate faces and
     recalculate normals outward (skill validations: merge-by-distance-missing,
-    missing-normals-recalculation)."""
+    missing-normals-recalculation). recalc=False keeps the normals as they are
+    - for bodies with enclosed cavities (rooms), whose inward-facing shells a
+    recalculation would turn outward."""
     bm = bmesh.new()
     bm.from_mesh(obj.data)
     bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=dist)
@@ -274,7 +307,8 @@ def cleanup(obj: bpy.types.Object, dist: float = EPS) -> None:
     loose_e = [e for e in bm.edges if not e.link_faces]
     if loose_e:
         bmesh.ops.delete(bm, geom=loose_e, context='EDGES')
-    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    if recalc:
+        bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
     bm.to_mesh(obj.data)
     bm.free()
     obj.data.update()
@@ -309,6 +343,8 @@ def world_box_uv(obj: bpy.types.Object, scale: float = 1.0) -> None:
         me.uv_layers.new(name='UVMap')
     uv = me.uv_layers.active.data
     mw = obj.matrix_world
+    rot = math.radians(obj.get('uv_rotate', 0.0))     # e.g. 45 deg: herringbone parquet at 45 deg to the walls
+    cr, sr = math.cos(rot), math.sin(rot)
     for poly in me.polygons:
         n = poly.normal
         ax = max(range(3), key=lambda i: abs(n[i]))
@@ -322,4 +358,6 @@ def world_box_uv(obj: bpy.types.Object, scale: float = 1.0) -> None:
                 u, v = co.y, co.x       # pitched along x: v runs down the slope, as on N-S pitches
             else:
                 u, v = co.x, co.y
+                if rot:
+                    u, v = u * cr - v * sr, u * sr + v * cr
             uv[li].uv = (u * scale, v * scale)

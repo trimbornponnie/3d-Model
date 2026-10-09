@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import argparse
 import importlib
+import importlib.util
 import json
 import os
 import sys
@@ -29,6 +30,7 @@ from giudecca import geo, materials, render, validate  # noqa: E402
 from giudecca.common import Ctx  # noqa: E402
 
 PARTS = ('site', 'towers', 'carpet', 'schiera')
+THROUGH = 0.70          # depth of the window / door cutters with interiors: through any wall (max 0.395 + reveals)
 
 
 def parse_args():
@@ -38,6 +40,8 @@ def parse_args():
     ap.add_argument('--out', default=os.path.join(HERE, 'output'))
     ap.add_argument('--no-export', action='store_true')
     ap.add_argument('--render', action='store_true')
+    ap.add_argument('--interiors', action='store_true',
+                    help='interiors, construction layers and joinery (work in progress)')
     ap.add_argument('--views', nargs='*', default=None)
     ap.add_argument('--samples', type=int, default=48)
     ap.add_argument('--res', type=int, nargs=2, default=(1600, 1000))
@@ -92,14 +96,26 @@ def main():
     root = geo.collection('COL_Giudecca')
     ctx = Ctx(mats=mats, root=root, cutters=geo.collection('Cutters', hide=True))
     timings = {}
+    interiors = args.interiors
+    geo.OPENINGS.clear()
+    # with interiors, windows and doors are cut right through the walls and the
+    # joinery glazes them (geo.THROUGH); the bodies are hollowed afterwards
+    geo.THROUGH = THROUGH if interiors else None
     for part in PARTS:
         if part not in args.only:
             continue
         t = time.time()
         mod = importlib.import_module(f'giudecca.{part}')
         mod.build(ctx)
+        if interiors and importlib.util.find_spec(f'giudecca.interior_{part}') is not None:
+            importlib.import_module(f'giudecca.interior_{part}').build(ctx)
         timings[part] = round(time.time() - t, 1)
         print(f'[build] {part}: {timings[part]} s')
+    if interiors and importlib.util.find_spec('giudecca.joinery') is not None:
+        t = time.time()
+        importlib.import_module('giudecca.joinery').build(ctx)
+        timings['joinery'] = round(time.time() - t, 1)
+        print(f"[build] joinery: {timings['joinery']} s ({len(geo.OPENINGS)} openings)")
     n_cut = geo.rename_cutters(ctx.cutters)          # SM_..._Cut -> CUT_..., kept hidden, never exported
     objs = mesh_objects(ctx)
     for o in objs:
