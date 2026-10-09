@@ -81,7 +81,7 @@ draws the north face). Key-plan insets on carpet and tower sheets are rotated
 | Element | z |
 |---|---|
 | High (outer) wall coping | T + 4.10 |
-| Concrete band under it, outer face | T + 2.71 → T + 3.01 |
+| Concrete head bands on the façades | 13 cm at z_f + 2.35 → 2.48 above each floor (n47 chain "13 \| 1,48 \| 13 \| 2,88", n61, n7) |
 | Roof plane (clay tiles, "tegole", SE 54) | 34 %, ≈ 0.1 m below the coping line |
 | Low (inner) wall coping, with copper box gutter | T + 2.90 |
 | Core walls (eaves, copper gutter, SE 59) | T + 2.48 |
@@ -93,7 +93,7 @@ draws the north face). Key-plan insets on carpet and tower sheets are rotated
 | Middle row | 6.02 | 10.12 | 8.92 | 8.72 | n49, n29 |
 | South row | 3.01 | 7.10 | 5.91 | 5.71 | n29, n9, n47 |
 | Towers | 9.02 | 13.12 | 11.93 | stair hall 11.40 → 11.73 | n62, n7, n61 |
-| Schiera north bar | 3.01 | 7.10 (south wall) | 5.91 (north wall) | panel 5.91, vault ≈ 5.6 | n5, n13, n40 |
+| Schiera north bar | 3.01 | 7.10 (south wall) | 5.91 (north wall) | panel 5.91, vault 5.71 | n5, n13, n40 |
 
 Copings: concrete ("copertina c.a."), ≈ 0.20 wide, 0.10–0.13 high (SE 54).
 
@@ -137,7 +137,8 @@ East column described; the west column is its mirror image in E (E' = 72 − E).
     0.61 stair windows (4.53–5.14 m from the N end at z 4.42 and 7.42;
     7.28–7.90 m at z 6.83 and 9.81);
   * N and S end faces: blank face brick, one corbelled chimney stack each
-    (bracket ≈ 12.3, top ≈ 14.2; n64, n39).
+    (corbel 11.55 → 11.90, stack top 13.75, cap 13.85; measured on n64, also
+    n39; n16, n61, n7 and n63 do not draw them).
 * **Bands**: continuous 13 cm concrete head bands at z_f + 2.35 → 2.48 on the
   pavilion faces; 11.38 → 11.51 on the L3 walls.
 * **Water stairs**: in every gap (and north of the north-east tower), a flight
@@ -203,7 +204,7 @@ the lower row's high wall (10.12 / 7.10) (n64, n18, n33, n70, n35).
   pier on the axis, L-shaped corner piers at the slot, T piers on E 35.5 / 48.5),
   height −0.45 → 5.06 plus a concrete band to 5.80 (n11, n72).
 * Two narrow straight stairs (0.9 m) rise from the campo to the gallery,
-  centred at E ≈ 36.0 and 48.0, Y 5.6 → 1.7.
+  on the axes of the court arches at E 36.5 and 47.5 (n11), Y 5.6 → 1.7.
 * The red 7 × 5 grid on n1 is the 2018 pavilion installation — **not** modelled.
 
 ### 5.5 Façades (n16, n14, n15, n59, n47, n48, n49, n77, n9, SE 50/51/53/66)
@@ -231,7 +232,8 @@ Offsets are in metres from the house axis.
   blank. North-row north pavilion: L0–L1 double-height arches (spring ≈ 5.05),
   L2 two-light 2.13. North-row south pavilion: L0 arches (spring 1.95, panel to
   2.71), L1 single 1.04, L2 two-light 2.13. Middle-row south pavilion: L0 arches
-  into the passage, L1 two-light. South row: L0 French-door pairs, L1 singles.
+  into the passage, L1 two-light. South row: L0 one 1.14 French door, L1
+  two-light 2.13 (singles in the campo houses) (n48).
 * **Core faces** toward the courts: two 0.60 × 0.60 landing windows per floor
   (z_f + 1.20 → 1.80) at the core-zone mid-line ± 1.08 m; vault eaves with copper
   gutter at T + 2.48.
@@ -265,8 +267,8 @@ Offsets are in metres from the house axis.
 * **Four blocks** on party axes E **35.5, 27.5, 19.5, 11.5**, each 7.34 m wide
   (axis ± 2.224 module), two mirrored dwellings. At L0 one deep volume Y 28.78 →
   35.22 (kitchen north, living room south). Above L0:
-  * **core** (twin stairs) axis ± 1.14 module, Y 31.22 → 32.93, barrel vault
-    (crown ≈ 5.6), with a **south-facing oculus panel** 4.17 m wide on the 4.09
+  * **core** (twin stairs) axis ± 1.14 module, Y 31.22 → 32.93, copper barrel
+    vault (eave 5.49, crown 5.71 = T + 2.70; n5 section F, SE 59), with a **south-facing oculus panel** 4.17 m wide on the 4.09
     coping: sides 5.57, crown 5.91 (R 6.50), oculi Ø 0.60 at z 4.66, axis ±
     0.825 m (SE 60);
   * **L1 terraces** either side of the core, Y 31.22 → 32.93, parapet to 4.09;

@@ -7,14 +7,16 @@ import math
 import bpy
 from mathutils import Vector
 
-# name: (camera location, look-at target, lens mm, ortho_scale or None)
+# name: (camera location, look-at target, lens mm, ortho_scale or None[, hidden name prefixes])
 VIEWS = {
     # like the 1:200 axonometric n39 / n71: from the south-west, high
     'axo_sw': ((-95.0, -95.0, 85.0), (2.0, 4.0, 2.0), None, 128.0),
     # like the white study-model photo n81: from the east, high oblique
     'model_east': ((115.0, -18.0, 62.0), (0.0, 2.0, 0.0), 32.0, None),
     # north façade (n16 / n59 d4), frontal, orthographic
-    'north_elev': ((0.0, 90.0, 6.5), (0.0, 0.0, 6.5), None, 128.0),
+    # site ground, water and garden are hidden so the ortho view reads like the 1:50 elevation
+    'north_elev': ((0.0, 33.0, 6.5), (0.0, 0.0, 6.5), None, 126.0,
+                   ('SM_Site_Plate', 'SM_Site_Water', 'SM_Site_Banks', 'SM_Site_Tree', 'SM_Site_Garden')),
     # bird's-eye straight down (compare with plans n33/n34/n70)
     'top': ((0.0, 0.0, 150.0), (0.0, 0.0, 0.0), None, 132.0),
     # eye level in the campo looking north to the gallery
@@ -58,7 +60,11 @@ def render_views(out_dir: str, views=None, res=(1600, 1000), samples: int = 48) 
     setup_world()
     paths = []
     for name in (views or VIEWS):
-        loc, tgt, lens, ortho = VIEWS[name]
+        loc, tgt, lens, ortho = VIEWS[name][:4]
+        hide = VIEWS[name][4] if len(VIEWS[name]) > 4 else ()
+        hidden = [o for o in bpy.data.objects if any(o.name.startswith(h) for h in hide)]
+        for o in hidden:
+            o.hide_render = True
         cd = bpy.data.cameras.get(f'CAM_{name}') or bpy.data.cameras.new(f'CAM_{name}')
         cam = bpy.data.objects.get(f'CAM_{name}') or bpy.data.objects.new(f'CAM_{name}', cd)
         if cam.name not in scene.collection.objects:
@@ -76,5 +82,7 @@ def render_views(out_dir: str, views=None, res=(1600, 1000), samples: int = 48) 
         path = f'{out_dir}/{name}.png'
         scene.render.filepath = path
         bpy.ops.render.render(write_still=True)
+        for o in hidden:
+            o.hide_render = False
         paths.append(path)
     return paths

@@ -25,7 +25,7 @@ WALL_M = WALL / MODULE
 # roof rule (T = top-floor level of the part)
 ROOF_HIGH = 4.10                       # high (outer) coping
 ROOF_LOW = 2.90                        # low (inner) coping, with copper box gutter
-ROOF_BAND = (2.71, 3.01)               # concrete band on the outer high walls
+HEAD_BAND = (2.35, 2.48)               # 13 cm concrete head bands above each floor (n47 chain, n61, n7)
 CORE_EAVE = 2.48                       # core E/W walls, copper gutter
 CORE_CROWN = 2.70                      # core vault crown (R 6.00 spanning E-W)
 CORE_VAULT_R = 6.00
@@ -48,7 +48,7 @@ TOWER = dict(
     hall_roof=(11.40, 11.73),
     patio_wall=(-0.12, 0.04, 1.26),          # (E0, E1, top) low front wall of the middle void
     mirror_axis=36.0,                        # west column: E' = 72 - E
-    chimney=dict(bracket=12.3, top=14.2, w=0.80, d=0.45),
+    chimney=dict(bracket=(11.55, 11.90), top=13.85, w=0.80, d=0.45),   # measured on n64
     water_stair=dict(e_top=2.45, e_bottom=0.25, risers=13),
 )
 
@@ -80,7 +80,7 @@ CORE_PIER_OFFSET = 1.15        # modules, corner piers of the floating north-row
 NOTCH_HALF = 1.485             # metres, notch on every core axis (north S-pav, middle N-pav)
 CAMPO = dict(e=(35.5, 48.5), y_open=(8.24, 15.0), pier_rows=(7.1, 8.1),
              pier_offset=1.12, pier_top=5.06, band_top=5.80,
-             l2_south=8.24, stairs_e=(36.0, 48.0), stairs_y=(1.7, 5.6))
+             l2_south=8.24, stairs_e=(36.5, 47.5), stairs_y=(1.7, 5.6))   # stairs on the court-arch axes (n11)
 CAMPO_HOUSES = (38.5, 45.5)    # house axes inside the campo
 
 # ground floor of the carpet
@@ -123,7 +123,7 @@ SCHIERA = dict(
     joint=23.5, bar_low=5.91, bar_high=7.10,
     lean_high=4.10, lean_low=2.90, terrace_parapet=4.09,
     panel=dict(w=4.17, side=5.57, crown=5.91, base=4.09, oculus_d=0.60, oculus_z=4.66, dx=0.825),
-    vault_crown=5.60,
+    vault_crown=5.71,                       # T + CORE_CROWN (n5 section F, SE 59)
     arches=(8.5, 14.5, 16.5, 22.5, 24.5, 30.5, 32.5, 38.5),
     arch_spring=2.0, arch_crown=2.5, arch_block_top=2.80,
     garden_y=(31.22, 34.97), garden_walls_e=(31.5, 23.5, 15.5),
