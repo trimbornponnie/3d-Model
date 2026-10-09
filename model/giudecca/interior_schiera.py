@@ -318,7 +318,7 @@ def _cutter(bm, zones, a):
     add(-ue_e, -(U_BS - 0.005), Y_NI, Y_BI, RAW, 8.5006, top=TILE_BAR)    # from the passage ceiling
     for u0, u1, z0 in ((U_CO, U_PP, 2.9012), (-U_PP, -U_CO, 2.9015)):     # terraces (exterior)
         add(u0, u1, Y_BO, Y_C, z0, Z_TERR + 0.03, paint=False)
-    add(-U_CM, U_CM, Y_BO, Y_PB, RAW - 0.0088, 6.2, paint=False)          # core up through the vault
+    add(-U_CM, U_CM, Y_BO, Y_PB, RAW - 0.0088, 6.2, top=Z_LINTEL)         # core up through the vault
     add(-U_CM, U_CM, Y_PL, Y_HW, RAW - 0.0085, Z_BEAM + 0.07, top=Z_BEAM) # beam B2 middle zone
     add(-U_BS, U_BS, Y_HW, Y_SI, RAW - 0.0082, 4.6, top=TILE_LEAN)        # lean-to
     add(-U_VD, U_VD, Y_BI - 0.003, Y_BO + 0.003, RAW - 0.0079, Z_PARAPET + 0.005)   # landing + spine
@@ -360,6 +360,23 @@ def _lining_cutter(recs):
         for u0, u1, z0, z1, d0, d1 in _pockets(r):
             I.face_box(bm, r, u0, u1, z0, z1, J.WALL - 0.02, 1.2)
     return bm
+
+
+def _pocket_zones(recs) -> list[tuple]:
+    """Paint zones for the joinery pockets behind the brick stop (radiator
+    niches, frame rebates): their masonry faces show inside the rooms."""
+    out = []
+    for r in recs:
+        for u0, u1, z0, z1, d0, d1 in _pockets(r):
+            d0 = max(d0, J.STOP - 0.01)
+            if d1 <= d0:
+                continue
+            c0, c1 = sorted((r['coord'] - r['out'] * d0, r['coord'] - r['out'] * d1))
+            if r['axis'] == 'x':
+                out.append((c0, c1, u0, u1, z0, z1))
+            else:
+                out.append((u0, u1, c0, c1, z0, z1))
+    return out
 
 
 def _paint(ctx, body, zones, tol=0.003) -> int:
@@ -597,6 +614,7 @@ def build(ctx) -> None:
             _cutter(cut, zones, a)
         _add_pockets(cut, recs)
         _trim_seats(cut, recs)
+        zones += _pocket_zones(recs)
         I.hollow(ctx, body, cut)
         _paint(ctx, body, zones)
         # 2. layers, partitions, doors, stairs, joinery

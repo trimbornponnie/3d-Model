@@ -78,7 +78,7 @@ YS0, YS1 = ROWS['N']['spav']        # 4.776, 7.224
 YNI0, YNI1 = YN0 + WM, YN1 - WM     # masonry faces 0.015, 1.985
 YSI0, YSI1 = YS0 + WM, YS1 - WM     # 5.015, 6.985
 YJ1 = JOINTS['NM'][1]               # 7.776, NorthPavM north face
-Y_ENT = 2.018                       # gallery face of the L1 entrance wall ("34 | 91,5", n31)
+Y_ENT = YN1 - 0.34 / M              # 2.018: gallery face of the L1 entrance wall ("34 | 91,5", n31)
 Y_FOOT = 2.779                      # foot of the flights
 YX0, YX1 = C.LANDING_N              # L3 cross wall 5.868 -> 6.05 (core body)
 L1_SOUTH = 6.906                    # L1 rooms end (dividing wall, interior_carpet_ms)
@@ -106,6 +106,7 @@ Z_BEAM3 = T + 2.14                  # L3 beam between the soggiorno and the core
 
 # doors: (centre, opening width) - opening = leaf + 2 x 0.023 casing (windows.md 7: leaves 0.80 / bath 0.70)
 DOOR_ROOM, DOOR_BATH, DOOR_HEAD = 0.85, 0.75, 2.10
+D_C2DOOR = 1.65 - DOOR_ROOM / 2          # camera-2 door, jamb at dE 1.65 (n78)
 ENT = dict(d=(0.28, 1.19), h=2.07, lintel=(0.16, 1.31, 0.41), sill=0.03)  # portoncino (SE 65, n31)
 TER = dict(d=(0.51, 1.285), h=2.05)                                        # L3 terrace doors (n65 "77,5")
 CELLAR = dict(w=0.775, z0=-0.32, z1=1.73, sill=0.11)                      # porte cantine (SE 65)
@@ -337,14 +338,12 @@ class Run:
             return
         bm = self.cutter(name)
         z_lo = T + CORE_EAVE - 0.15
-        hw = 1.76
-        n = 24
         for a in C.block_axes(block, 'N'):
             xc = xE(a)
-            ang = math.asin(hw / VAULT_R0)
-            arc = [(xc + VAULT_R0 * math.sin(ang - 2 * ang * i / n), VAULT_ZC + VAULT_R0 * math.cos(ang - 2 * ang * i / n))
-                   for i in range(n + 1)]
-            prof = [(xc - hw, z_lo), (xc + hw, z_lo)] + arc
+            arc = I._arc_band(xc, VAULT_ZC, VAULT_R0, VAULT_R0 - 0.1, D_CORE, 24)[:25]   # the R2 stack's outer arc
+            w = D_CORE + 0.005                        # 5 mm past the bodies' faces (no coplanar end faces)
+            ze = VAULT_ZC + math.sqrt(VAULT_R0 ** 2 - w * w)
+            prof = [(xc - w, z_lo), (xc + w, z_lo), (xc + w, ze)] + list(reversed(arc)) + [(xc - w, ze)]
             geo.add_prism_y(bm, prof, yY(YX0 + 0.06), yY(YN1 - 0.05))
 
     # -------------------------------------------------------------- finish
@@ -355,12 +354,67 @@ class Run:
                 bm.free()
                 continue
             J.add_pockets(bm, self.recs(name))
-            I.hollow(self.ctx, o, bm)
+            _hollow(self.ctx, o, bm)
         self.cut = {}
 
     def finish(self):
         for S in self.kits:
             S.finish()
+
+
+def _hollow(ctx, body, volumes):
+    """interior.hollow with the cutter's shells kept apart: hollow() welds
+    coincident vertices of touching boxes (object_from_bmesh merge=True),
+    which makes the cutter non-manifold and the exact difference fail."""
+    if not len(volumes.faces):
+        volumes.free()
+        return
+    cutter = geo.object_from_bmesh(volumes, f'{body.name}_CutInt', ctx.cutters, merge=False)
+    mod = body.modifiers.new('Bool_Interior', 'BOOLEAN')
+    mod.operation = 'DIFFERENCE'
+    mod.solver = 'EXACT'
+    mod.use_self = True
+    mod.object = cutter
+    geo.apply_modifiers(body)
+    geo.cleanup(body, dist=1e-6, recalc=False)
+
+
+def _cut_openings(ctx, obj, recs, extra):
+    """interior.cut_openings for a layer object made of separate touching
+    shells (the wall linings): the cutter's shells and the object's shells
+    are not welded (no merge by distance beyond 1 micron)."""
+    bm = extra
+    for r in recs:
+        geo.Face(r['axis'], r['coord'], r['out']).solid(bm, r['outline'], 1.5, outside=0.3)
+    if not len(bm.faces):
+        bm.free()
+        return
+    cutter = geo.object_from_bmesh(bm, f'{obj.name}_CutOpenings', ctx.cutters, merge=False)
+    mod = obj.modifiers.new('Bool_Openings', 'BOOLEAN')
+    mod.operation = 'DIFFERENCE'
+    mod.solver = 'EXACT'
+    mod.use_self = True
+    mod.object = cutter
+    geo.apply_modifiers(obj)
+    bm2 = bmesh.new()
+    bm2.from_mesh(obj.data)
+    bmesh.ops.dissolve_degenerate(bm2, dist=1e-6, edges=bm2.edges)
+    loose = [v for v in bm2.verts if not v.link_faces]
+    if loose:
+        bmesh.ops.delete(bm2, geom=loose, context='VERTS')
+    bmesh.ops.recalc_face_normals(bm2, faces=bm2.faces)
+    bm2.to_mesh(obj.data)
+    bm2.free()
+    obj.data.update()
+
+
+def _poly_z(pts, x):
+    """z on a polyline [(x, z), ...] (any order) at x."""
+    p = sorted(pts)
+    for (x0, z0), (x1, z1) in zip(p[:-1], p[1:]):
+        if x0 - 1e-9 <= x <= x1 + 1e-9:
+            return z0 + (z1 - z0) * (x - x0) / (x1 - x0) if x1 > x0 else z0
+    return p[0][1] if x < p[0][0] else p[-1][1]
 
 
 def _move_z(o, z_from, z_to):
@@ -600,9 +654,9 @@ class Seg:
             for w in walls:
                 I.prism(kit('CellarBrick', 'M_Brick'), ER(w - 0.06 / M, w + 0.06 / M, y0, y1),
                         CELLAR['z0'] - 0.32, C.Z_L1_SOFFIT)
+            R.cEY(name, lo, hi, y0, y1, -0.75, C.Z_L1_SOFFIT + 0.05)
             for i in range(0, len(edges), 2):
                 E0, E1 = edges[i], edges[i + 1]
-                R.cEY(name, E0, E1, y0, y1, -0.75, C.Z_L1_SOFFIT + 0.05)
                 poly = ER(E0, E1, y0, y1)
                 I.floor_stack(kit, poly, CELLAR['z0'], BU.FLOOR_CELLAR, prefix='')
                 I.prism(kit('CeilingPlaster', 'M_PlasterInt'), poly, C.Z_L1_SOFFIT - 0.01, C.Z_L1_SOFFIT)
@@ -633,14 +687,18 @@ class Seg:
         recs += [r for r in R.recs(self.core) if r.get('type') != 'DN'
                  and any(abs((r['coord'] if r['axis'] == 'x' else sum(J.dims(r)[:2]) / 2) - x) < 3.5 for x in xs)]
         recs += self.new_recs
+        import time
+        t0 = time.time()
         J.build_openings(kit, recs)
         objs = kit.flush()
+        t1 = time.time()
         lin = [r for r in recs if r.get('type') not in ('PN', 'DN', 'CD') and J.classify(r) is not None
                and not r['target'].startswith('SM_Carpet_CantineN')]
         for name in ('WallLiningAdhesive', 'WallLiningInsulation', 'WallLiningBoard'):
             o = objs.get(kit.name(name))
             if o is not None and lin:
-                I.cut_openings(self.R.ctx, o, lin, extra=J.lining_cutter(lin))
+                _cut_openings(self.R.ctx, o, lin, J.lining_cutter(lin))
+        print(f'[carpet north] {self.seg.tag}: joinery + flush {t1 - t0:.1f} s, linings {time.time() - t1:.1f} s')
 
 
 def C_RANGES(a_in, b_in):
@@ -717,13 +775,21 @@ class House:
         S, h = self.S, self
         core, np_, sp = S.core, S.np, self.sp
         D = D_CORE
-        # the core: one void through L1 -> vault, both dwellings
+        # the core: one void through L1 -> vault, both dwellings; its bottom
+        # 0.30 everywhere (the L1 core slab and its edge band replace it)
         h.cut(core, 1, -D, D, YN1 - EPS, YS0 + EPS, C.Z_L1_SOFFIT - 0.10, T + 3.5)
-        # L3 notch landing (core body above 9.10, S-pav below), kitchens' overlap with the core walls
+        h.cut(core, 1, -CORE_W / 2 - 0.05, CORE_W / 2 + 0.05, YN1 - EPS, YS0 + EPS, C.Z_L1_SOFFIT - 0.10, Z1)
+        # the core's landing part lies inside the S-pav beyond the notch: keep it in the notch only
         for s in (-1, 1):
-            h.cut(core, s, D_KIT, CORE_W / 2 + 0.05, YSI0, YX1 + EPS, Z3 - SLAB, T + 3.5)
+            h.cut(core, s, NOTCH_HALF, CORE_W / 2 + 0.05, YS0, YX1 + EPS, Z3 - SLAB, T + 3.5)
+        h.cut(core, 1, -CORE_W / 2 - 0.05, CORE_W / 2 + 0.05, YS0, YX1 + EPS, Z3 - SLAB, JOINTS['NM'][2])
+        # L3 notch landing: core body to the top, S-pav up to the vault's outer surface
+        h.cut(core, 1, -D, D, YS0 - EPS, YX0, Z3 - SLAB, T + 3.5)
+        if self.R.obj(sp) is not None:
+            arc = I._arc_band(self.xa, VAULT_ZC, VAULT_R0, VAULT_R0 - 0.1, D_CORE, 24)[:25]
+            prof = [(self.xa - D, Z3 - SLAB), (self.xa + D, Z3 - SLAB)] + list(reversed(arc))
+            geo.add_prism_y(self.R.cutter(sp), prof, yY(YX0), yY(YS0 - EPS))
         for name in (core, sp):
-            h.cut(name, 1, -D, D, YS0 - EPS, YX0, Z3 - SLAB, T + 3.5)
             for s in (-1, 1):
                 # kitchen door through the landing | kitchen wall
                 yc = 5.36
@@ -738,7 +804,7 @@ class House:
             h.cut(sp, 1, -D, D, YS0 - EPS, YSI0 + EPS, C.Z_L1_SOFFIT - 0.10, C.Z_L2_SOFFIT)
         h.cut(sp, 1, -D, D, YS0 - EPS, YSI0 + EPS, C.Z_L2_SOFFIT - (0.10 if self.campo else 0.0), Z3 - SLAB)
         # notch terrace deck zone (S-pav from 8.72; R3 to 9.15)
-        y_end = Y_OC_CAMPO if self.campo else YS1 + EPS
+        y_end = Y_CAMPO_PAR if self.campo else YS1 + EPS
         h.cut(sp, 1, -NOTCH_HALF - 0.01, NOTCH_HALF + 0.01, YX1, y_end, Z3 - SLAB, Z3 + 0.20)
         if self.campo:
             # campo L2 bath chase: keep the body Y 7.79 -> 8.0 behind the bath (cut back below)
@@ -756,7 +822,7 @@ class House:
         y_end = Y_CLOSE + 0.02 / M if self.campo else YS0
         I.prism(cs, h.rect(1, -hw, hw, YN1, y_end), Z1 - SLAB - 0.03, Z1 - 0.10)
         for s in (-1, 1):
-            I.prism(cs, h.rect(s, D + 0.03, hw, YN1, y_end if self.campo else YS0), Z1 - 0.10, Z1)
+            I.prism(cs, h.rect(s, D, hw, YN1, y_end), Z1 - 0.10, Z1)
         # L1 halls in the S-pav north wall zone
         if not self.campo:
             I.prism(kit('FloorSlabExposed', 'M_Concrete'), h.rect(1, -D, D, YS0, YSI0), Z1 - SLAB, Z1 - 0.10)
@@ -784,8 +850,8 @@ class House:
         # ---- L1
         cell(s, D_AX, D, YN1, Y_FOOT, Z1, dict(N='W', S='O', A='W', O='L'), FL_OPEN, flat)          # landing
         y_core_end = YS0
-        cell(s, D_AX, D_BAND, Y_FOOT, y_core_end, Z1, dict(N='O', S='W' if self.campo else 'O', A='W', O='O'),
-             FL_OPEN, None)                                                                          # flight band
+        cell(s, D_AX + 0.002, D_BAND - 0.002, Y_FOOT, y_core_end, Z1,
+             dict(N='O', S='W' if self.campo else 'O', A='W', O='O'), FL_OPEN, None)      # flight band (under it)
         cell(s, D_BAND, D, Y_FOOT, y_core_end, Z1, dict(N='O', S='W' if self.campo else 'O', A='O', O='L'),
              FL_OPEN, flat)                                                                          # corridor
         if not self.campo:
@@ -827,13 +893,11 @@ class House:
         zs = Z_BEAM3
         x1 = math.sqrt(max(VAULT_RIN ** 2 - (zs - VAULT_ZC) ** 2, 0.0))
         x1 = min(x1, D_CORE - LIN)
-        if s > 0:
-            n = 12
-            prof = [(self.xa - x1, zs), (self.xa + x1, zs)]
-            for i in range(1, n):
-                x = x1 - 2 * x1 * i / n
-                prof.append((self.xa + x, VAULT_ZC + math.sqrt(VAULT_RIN ** 2 - x * x) - 0.001))
-            geo.add_prism_y(sk, prof, yY(YN1) - PL, yY(YN1))
+        n = 8
+        xs = [D_AX + (x1 - D_AX) * i / n for i in range(n + 1)]
+        zt = [VAULT_ZC + math.sqrt(VAULT_RIN ** 2 - x * x) for x in xs]
+        prof = [(self.X(s, x), z) for x, z in zip(xs, zt)] + [(self.X(s, D_AX), zs)]
+        geo.add_prism_y(sk, I.ccw(prof), yY(YN1) - PL, yY(YN1))
 
     def cell(self, s, d0, d1, Y0, Y1, zf, sides, floor, ceil, gaps=None):
         """A room (or part of one): floor layers inside the finished faces,
@@ -956,7 +1020,7 @@ class House:
                  doors=[(dd - D_AX, DOOR_BATH, zf + DOOR_HEAD)], prefix='Partition')
         # camera 2 | landing partition (L2, along d)
         wall(kit, BU.PARTITION, h.P(s, D_AX, Y_C2), h.P(s, D, Y_C2), Z2 - 0.10, SOFF[Z2],
-             doors=[(1.28 - D_AX, DOOR_ROOM, Z2 + DOOR_HEAD)], prefix='Partition')
+             doors=[(D_C2DOOR - D_AX, DOOR_ROOM, Z2 + DOOR_HEAD)], prefix='Partition')
 
     def axis_walls(self):
         """Axis wall between the two dwellings (W5 in the pavilions, RC spine
@@ -975,8 +1039,16 @@ class House:
         # L3: N-pav to the roof, beam zone, core strip and notch landing to the vault
         wall(kit, BU.WALL_SEP, P(YNI0), P(YNI1), Z3 - 0.10, roof_ceiling('N'), prefix='Sep')
         wall(kit, SPINE, P(YNI1), P(YN1), Z3 - 0.10, Z_BEAM3, prefix='Spine')
-        zc = VAULT_ZC + math.sqrt(VAULT_RIN ** 2 - D_AX ** 2)
-        wall(kit, SPINE, P(YN1), P(YX0), Z3 - 0.10, zc, prefix='Spine')
+        # under the vault: each layer's top on the vault soffit's facets (24 over +-1.77)
+        inner = I._arc_band(self.xa, VAULT_ZC, VAULT_RIN + 0.1, VAULT_RIN, D_CORE, 24)[25:]
+        soff = lambda x: _poly_z(inner, x)
+        t_left = BU.total(SPINE) / 2
+        for elem, mat, t in SPINE:
+            xa_, xb_ = sorted((self.xa + t_left - t, self.xa + t_left))
+            xs = [xa_] + [x for x, z in inner if xa_ < x < xb_] + [xb_]
+            prof = [(xa_, Z3 - 0.10), (xb_, Z3 - 0.10)] + [(x, soff(x)) for x in reversed(xs)]
+            geo.add_prism_y(kit(f'Spine{elem}', mat), prof, yY(YX0), yY(YN1))
+            t_left -= t
 
     def doors(self, s):
         kit, h = self.kit, self
@@ -984,28 +1056,28 @@ class House:
         sw_cam = -s                    # walls along +Y (south): +d (the camera) lies right for s = +1
         if not self.campo:
             I.door(kit, h.P(s, dc, YSI0), h.P(s, dc, L1_SOUTH), (5.36 - YSI0) * M, DOOR_ROOM, Z1 + DOOR_HEAD, Z1,
-                   0.11, hinge='a', swing=sw_cam)
+                   0.11 - 0.002, hinge='a', swing=sw_cam)
         y2 = Y_CAMPO_IN if self.campo else L2_SOUTH
         I.door(kit, h.P(s, dc, YSI0), h.P(s, dc, y2), (5.40 - YSI0) * M, DOOR_ROOM, Z2 + DOOR_HEAD, Z2,
-               0.11, hinge='a', swing=sw_cam)
+               0.11 - 0.002, hinge='a', swing=sw_cam)
         for lvl, zf, dd, t in ((1, Z1, 1.23, 0.11), (2, Z2, 1.305, 0.15)):
             if lvl == 1 and self.campo:
                 continue
             # walls along +d: the bath (south) lies left for s = +1
             I.door(kit, h.P(s, D_AX, Y_HB[lvl]), h.P(s, D_P0, Y_HB[lvl]), dd - D_AX, DOOR_BATH, zf + DOOR_HEAD, zf,
-                   t, hinge='b', swing=s)
+                   t - 0.002, hinge='b', swing=s)
             self.door_floor(s, 'd', Y_HB[lvl], dd, DOOR_BATH, t, zf, FL_OPEN if lvl == 1 else
                             (FL_OPEN if self.campo else FL_INT))
-        I.door(kit, h.P(s, D_AX, Y_C2), h.P(s, D_CORE, Y_C2), 1.28 - D_AX, DOOR_ROOM, Z2 + DOOR_HEAD, Z2,
-               0.11, hinge='b', swing=-s)
-        self.door_floor(s, 'd', Y_C2, 1.28, DOOR_ROOM, 0.11, Z2, FL_INT)
+        I.door(kit, h.P(s, D_AX, Y_C2), h.P(s, D_CORE, Y_C2), D_C2DOOR - D_AX, DOOR_ROOM, Z2 + DOOR_HEAD, Z2,
+               0.11 - 0.002, hinge='b', swing=-s)
+        self.door_floor(s, 'd', Y_C2, D_C2DOOR, DOOR_ROOM, 0.11, Z2, FL_INT)
         if not self.campo:
             self.door_floor(s, 'Y', dc, 5.36, DOOR_ROOM, 0.11, Z1, FL_OPEN)
         self.door_floor(s, 'Y', dc, 5.40, DOOR_ROOM, 0.11, Z2, FL_OPEN if self.campo else FL_INT)
         # kitchen door through the L3 landing | kitchen wall (core masonry + both linings)
         dk = (D_CORE - LIN + D_KIT + LIN) / 2
         I.door(kit, h.P(s, dk, YS0), h.P(s, dk, YSI1), (5.36 - YS0) * M, DOOR_ROOM, Z3 + DOOR_HEAD, Z3,
-               D_KIT - D_CORE + 2 * LIN, hinge='a', swing=sw_cam)
+               D_KIT - D_CORE + 2 * LIN - 0.002, hinge='a', swing=sw_cam)
         self.door_floor(s, 'Y', dk, 5.36, DOOR_ROOM, D_KIT - D_CORE + 2 * LIN, Z3, FL_INT)
 
     def door_floor(self, s, along, c, pos, w, t, zf, layers):
@@ -1027,7 +1099,10 @@ class House:
         width = D_BAND - D_AX
         rails = kit('BalustradeRails', 'M_Steel')
         for zf, rise in ((Z1, (Z2 - Z1) / N_RISERS), (Z2, (Z3 - Z2) / N_RISERS)):
-            I.flight(kit, start, (0, -1), width, N_RISERS, rise, GOING, zf, waist=0.16, side=-s)
+            # 14 steps + the upper floor's edge as the 15th riser (flight() without
+            # tread_top_last leaves a zero-width fin on the top riser)
+            I.flight(kit, start, (0, -1), width, N_RISERS - 1, rise, GOING, zf, waist=0.16, side=-s,
+                     tread_top_last=True)
             # raked balustrade on the open edge, handrail on the spine
             for d, posts in ((D_BAND - 0.025, True), (D_AX + 0.055, False)):
                 def pt(sv, dz):
@@ -1121,12 +1196,12 @@ class House:
         """L3 notch terrace (R3, 9.15): slab, layers either side of the low
         axis divider, the terrace doors' thresholds and joinery."""
         kit, S, h = self.kit, self.S, self
-        y_end = Y_OC_CAMPO if self.campo else YS1
+        y_end = Y_CAMPO_PAR if self.campo else YS1
         S.deck(h.rect(1, -NOTCH_HALF, NOTCH_HALF, YX1, y_end), None)
         for s in (-1, 1):
             S.deck(None, h.rect(s, 0.10, NOTCH_HALF, YX1, y_end))
         # low divider on the axis to the oculus panel (n58, n65; height assumed)
-        y_div = Y_OC_CAMPO if self.campo else YJ1
+        y_div = Y_CAMPO_PAR if self.campo else YJ1
         I.prism(kit('TerraceWall', 'M_Brick'), h.rect(1, -0.10, 0.10, YX1, y_div), Z3 - 0.10, 9.98)
         I.prism(kit('TerraceCoping', 'M_Concrete'), h.rect(1, -0.12, 0.12, YX1, y_div - 0.0 / M), 9.98, 10.10)
         # terrace doors in the cross wall: thresholds (landing 9.02 -> deck 9.15) and joinery
@@ -1183,6 +1258,8 @@ def wall(kit, layers, A, B, z0, top, doors=(), prefix='Wall', offset=0.0):
 def build(ctx) -> None:
     if geo.THROUGH is None:
         return
+    import time
+    t0 = time.time()
     _register_types()
     R = Run(ctx)
     R.prepare()
@@ -1190,5 +1267,8 @@ def build(ctx) -> None:
         R.segment(seg)
     for block in BLOCKS:
         R.vault_skin(block)
+    t1 = time.time()
     R.hollow_all()
+    t2 = time.time()
     R.finish()
+    print(f'[carpet north] layout {t1 - t0:.1f} s, hollow {t2 - t1:.1f} s, joinery + linings {time.time() - t2:.1f} s')
