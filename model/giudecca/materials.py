@@ -46,7 +46,9 @@ PALETTE = {
     'M_DoorLeaf': ((168, 132, 92), 0.0, 0.55),    # interior door leaves (wood)
     'M_DoorFrame': ((150, 116, 80), 0.0, 0.55),   # interior door casings and architraves
     'M_StairTread': ((214, 206, 190), 0.0, 0.5),  # stair treads and landings
-    'M_Steel': ((58, 60, 62), 0.6, 0.4),          # handrails, balustrades
+    'M_Steel': ((58, 60, 62), 0.6, 0.4),          # handrails, balustrades, metal frames, handles
+    'M_Joinery': ((233, 225, 211), 0.0, 0.45),    # painted wood windows and doors, cream ~RAL 9001 (photo n24)
+    'M_CellarJoinery': ((128, 130, 126), 0.0, 0.6),  # cellar doors and windows, painted grey
 }
 
 # material -> generator of its base-colour image (T_<Asset>_D, textures.py)

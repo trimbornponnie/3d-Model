@@ -94,14 +94,21 @@ def _shell_volumes(bm) -> list[tuple[float, tuple, tuple]]:
                         stack.append(g)
         if not closed:
             continue
+        # about the shell's own centroid, in Python floats: mathutils vectors are
+        # single precision, and a 2 cm shell 60 m from the origin would lose
+        # its sign in the cancellation
+        pts = [tuple(v.co) for f in comp for v in f.verts]
+        cx = sum(p[0] for p in pts) / len(pts)
+        cy = sum(p[1] for p in pts) / len(pts)
+        cz = sum(p[2] for p in pts) / len(pts)
         vol = 0.0
-        pts = []
         for f in comp:
-            co = [v.co for v in f.verts]
-            pts += co
+            co = [(v.co[0] - cx, v.co[1] - cy, v.co[2] - cz) for v in f.verts]
             a = co[0]
             for k in range(1, len(co) - 1):
-                vol += a.dot(co[k].cross(co[k + 1]))
+                b, c = co[k], co[k + 1]
+                vol += (a[0] * (b[1] * c[2] - b[2] * c[1]) + a[1] * (b[2] * c[0] - b[0] * c[2])
+                        + a[2] * (b[0] * c[1] - b[1] * c[0]))
         lo = tuple(min(p[i] for p in pts) for i in range(3))
         hi = tuple(max(p[i] for p in pts) for i in range(3))
         vols.append((vol / 6.0, lo, hi))

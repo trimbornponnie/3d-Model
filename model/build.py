@@ -40,6 +40,8 @@ def parse_args():
     ap.add_argument('--out', default=os.path.join(HERE, 'output'))
     ap.add_argument('--no-export', action='store_true')
     ap.add_argument('--render', action='store_true')
+    ap.add_argument('--web', default=None, metavar='DIR',
+                    help='also write the Draco-compressed per-part glTF (.json + .jpg) for the browser viewer')
     ap.add_argument('--interiors', action='store_true',
                     help='interiors, construction layers and joinery (work in progress)')
     ap.add_argument('--views', nargs='*', default=None)
@@ -136,6 +138,10 @@ def main():
     os.makedirs(args.out, exist_ok=True)
     if not args.no_export:
         report['files'] = export(ctx, args.out)
+    if args.web:
+        from giudecca import webexport
+        report['web'] = webexport.export(mesh_objects(ctx), args.web)
+        print('[web]', json.dumps({k: v['bytes'] for k, v in report['web'].items()}))
     if args.render:
         report['renders'] = render.render_views(args.out, args.views, tuple(args.res), args.samples)
     if not args.no_export:

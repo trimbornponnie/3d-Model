@@ -31,8 +31,9 @@ Poly = Sequence[tuple[float, float]]
 class Kit:
     """One bmesh per (element, material) of a part tag, flushed into objects."""
 
-    def __init__(self, ctx, part: str, tag: str, col: str):
+    def __init__(self, ctx, part: str, tag: str, col: str, merge: bool = False):
         self.ctx, self.part, self.tag, self.col = ctx, part, tag, col
+        self.merge = merge         # False: touching solids stay separate closed shells
         self.items: dict[str, tuple[bmesh.types.BMesh, str, dict]] = {}
 
     def name(self, element: str) -> str:
@@ -48,7 +49,7 @@ class Kit:
         out = {}
         for name, (bm, mat, props) in self.items.items():
             if len(bm.faces):
-                o = geo.object_from_bmesh(bm, name, self.ctx.col(self.col), self.ctx.mats[mat])
+                o = geo.object_from_bmesh(bm, name, self.ctx.col(self.col), self.ctx.mats[mat], merge=self.merge)
                 for k, v in props.items():
                     o[k] = v
                 out[name] = o
@@ -76,10 +77,21 @@ def ccw(poly: Poly) -> list[tuple[float, float]]:
     return p if area(p) > 0 else list(reversed(p))
 
 
+def clean(poly: Poly) -> list[tuple[float, float]]:
+    """Counter-clockwise polygon without repeated consecutive points."""
+    p = []
+    for v in ccw(poly):
+        if not p or (Vector(v) - Vector(p[-1])).length > 1e-7:
+            p.append(v)
+    if len(p) > 2 and (Vector(p[0]) - Vector(p[-1])).length <= 1e-7:
+        p.pop()
+    return p
+
+
 def offset(poly: Poly, d: float) -> list[tuple[float, float]]:
     """Polygon offset by d (positive = inward for a ccw polygon), mitred
     corners. Meant for the rectilinear rooms of this project."""
-    p = ccw(poly)
+    p = clean(poly)                           # no zero-length edges
     n = len(p)
     out = []
     for i in range(n):
@@ -91,7 +103,7 @@ def offset(poly: Poly, d: float) -> list[tuple[float, float]]:
             out.append(tuple(b + n1 * d))
             continue
         m.normalize()
-        k = d / max(m.dot(n1), 1e-6)
+        k = d / max(m.dot(n1), 0.25)          # clamp the mitre at very sharp corners
         out.append(tuple(b + m * k))
     return out
 
@@ -115,7 +127,7 @@ def prism(bm, poly: Poly, z0: float, top: float | Callable[[float, float], float
 def ring(bm, outer: Poly, inner: Poly, z0: float, z1: float) -> None:
     """Closed ring solid between two polygons with the same corner count
     (e.g. a polygon and its offset), from z0 to z1: one manifold shell."""
-    o, i_ = ccw(outer), ccw(inner)
+    o, i_ = clean(outer), clean(inner)
     assert len(o) == len(i_)
     ob = [bm.verts.new((x, y, z0)) for x, y in o]
     ot = [bm.verts.new((x, y, z1)) for x, y in o]
@@ -215,7 +227,7 @@ def floor_stack(kit: Kit, poly: Poly, z_top: float, layers, prefix: str = 'Floor
     bottom level."""
     z = z_top
     for elem, mat, t in layers:
-        if t > 0:
+        if t > 0 and mat is not None:
             props = {'uv_rotate': 45.0} if mat == 'M_Parquet' else {}
             prism(kit(f'{prefix}{elem}', mat, **props), poly, z - t, z)
         z -= t
@@ -227,12 +239,13 @@ def lining(kit: Kit, poly: Poly, z0: float, z1: float, layers, prefix: str = 'Wa
     masonry's inner face (ccw), layers [(element, material, thickness), ...]
     from the masonry inward. Returns the finished room outline."""
     d = 0.0
-    outer = ccw(poly)
+    outer = clean(poly)
     for elem, mat, t in layers:
         if t <= 0:
             continue
         inner = offset(poly, d + t)
-        ring(kit(f'{prefix}{elem}', mat), outer, inner, z0, z1)
+        if mat is not None:
+            ring(kit(f'{prefix}{elem}', mat), outer, inner, z0, z1)
         outer, d = inner, d + t
     return outer
 
@@ -256,7 +269,8 @@ def partition(kit: Kit, a, b, z0: float, z1: float, layers, doors=(), prefix: st
     out += [(L + extend, z0), (L + extend, z1), (-extend, z1)]
     t_left = T / 2
     for elem, mat, t in layers:
-        oprism(kit(f'{prefix}{elem}', mat), a, b, out, t_left - t, t_left)
+        if mat is not None:
+            oprism(kit(f'{prefix}{elem}', mat), a, b, out, t_left - t, t_left)
         t_left -= t
 
 
@@ -302,6 +316,65 @@ def door(kit: Kit, a, b, s: float, width: float, head: float, z0: float, wall_t:
     pts = [Vector((0, 0)), along * lw, along * lw + across * leaf_t, across * leaf_t]
     poly = [tuple(piv + rot(p)) for p in pts]
     prism(kit(f'{prefix}Leaves', leaf_mat), poly, z0 + 0.008, head - casing - 0.003)
+
+
+def sloped_stack(kit: Kit, poly: Poly, top: Callable[[float, float], float], layers,
+                 prefix: str = 'Roof', slope: float = 0.34) -> Callable[[float, float], float]:
+    """Layers under a sloping plane z = top(x, y) (e.g. the underside of the
+    roof tiles), thicknesses measured perpendicular to the slope; each layer
+    is a prism over the plan polygon between two parallel planes. Returns the
+    bottom surface z(x, y)."""
+    k = math.sqrt(1.0 + slope * slope)
+    d = 0.0
+    for elem, mat, t in layers:
+        if t > 0 and mat is not None:
+            bm = kit(f'{prefix}{elem}', mat)
+            p = ccw(poly)
+            a = [bm.verts.new((x, y, top(x, y) - (d + t) * k)) for x, y in p]
+            b = [bm.verts.new((x, y, top(x, y) - d * k)) for x, y in p]
+            bm.faces.new(list(reversed(a)))
+            bm.faces.new(b)
+            for i in range(len(p)):
+                j = (i + 1) % len(p)
+                bm.faces.new((a[i], a[j], b[j], b[i]))
+        d += t
+    return lambda x, y: top(x, y) - d * k
+
+
+def vault_stack(kit: Kit, xc: float, zc: float, r_out: float, half_w: float, y0: float, y1: float,
+                layers, prefix: str = 'Vault', segments: int = 24) -> float:
+    """Curved layers of a barrel vault whose arc lies in the x-z plane (centre
+    xc, zc) and which runs along y from y0 to y1: from radius r_out (the top
+    of the first layer) inward, each layer an arc band over |x - xc| <= half_w.
+    Returns the inner radius (the finished soffit)."""
+    r = r_out
+    for elem, mat, t in layers:
+        if t > 0 and mat is not None:
+            prof = _arc_band(xc, zc, r, r - t, half_w, segments)
+            geo.add_prism_y(kit(f'{prefix}{elem}', mat), prof, y0, y1)
+        r -= t
+    return r
+
+
+def _arc_band(xc, zc, r_out, r_in, half_w, n):
+    a_out = math.asin(min(1.0, half_w / r_out))
+    a_in = math.asin(min(1.0, half_w / r_in))
+    outer = [(xc + r_out * math.sin(-a_out + 2 * a_out * i / n), zc + r_out * math.cos(-a_out + 2 * a_out * i / n))
+             for i in range(n + 1)]
+    inner = [(xc + r_in * math.sin(a_in - 2 * a_in * i / n), zc + r_in * math.cos(a_in - 2 * a_in * i / n))
+             for i in range(n + 1)]
+    return outer + inner
+
+
+def face_box(bm, rec: dict, u0: float, u1: float, z0: float, z1: float, d0: float, d1: float) -> None:
+    """Box in an opening's face frame (geo.OPENINGS record): u0..u1 along the
+    face, z0..z1, d0..d1 metres behind the outer face. For pockets in the
+    hollowing cutter (frame rebates, radiator niches) and for joinery parts."""
+    c0, c1 = rec['coord'] - rec['out'] * d0, rec['coord'] - rec['out'] * d1
+    if rec['axis'] == 'x':
+        geo.add_box(bm, c0, c1, u0, u1, z0, z1)
+    else:
+        geo.add_box(bm, u0, u1, c0, c1, z0, z1)
 
 
 # --------------------------------------------------------------- stairs

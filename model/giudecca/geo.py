@@ -42,9 +42,13 @@ def _link(obj: bpy.types.Object, col: bpy.types.Collection) -> bpy.types.Object:
 
 
 def object_from_bmesh(bm: bmesh.types.BMesh, name: str, col: bpy.types.Collection,
-                      material: bpy.types.Material | None = None) -> bpy.types.Object:
-    bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=EPS)
+                      material: bpy.types.Material | None = None, merge: bool = True) -> bpy.types.Object:
+    """merge=False keeps touching solids as separate closed shells (no
+    vertices welded across them, so no non-manifold edges where they meet)."""
+    if merge:
+        bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=EPS)
     bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    orient_shells(bm)
     me = bpy.data.meshes.new(name)
     bm.to_mesh(me)
     bm.free()
@@ -52,6 +56,45 @@ def object_from_bmesh(bm: bmesh.types.BMesh, name: str, col: bpy.types.Collectio
     if material is not None:
         me.materials.append(material)
     return _link(obj, col)
+
+
+def orient_shells(bm: bmesh.types.BMesh) -> int:
+    """Turn every closed shell (connected island) of bm outward: its signed
+    volume, taken about the island's own centroid, must be positive.
+    recalc_face_normals alone can flip small shells far from the origin (a
+    handle 2 cm across at x = 60 m). Returns the number of shells flipped."""
+    bm.faces.index_update()
+    seen, flipped = set(), 0
+    for f0 in bm.faces:
+        if f0.index in seen:
+            continue
+        comp, stack = [], [f0]
+        seen.add(f0.index)
+        while stack:
+            f = stack.pop()
+            comp.append(f)
+            for e in f.edges:
+                for g in e.link_faces:
+                    if g.index not in seen:
+                        seen.add(g.index)
+                        stack.append(g)
+        verts = {v for f in comp for v in f.verts}
+        n = max(len(verts), 1)
+        cx = sum(v.co[0] for v in verts) / n
+        cy = sum(v.co[1] for v in verts) / n
+        cz = sum(v.co[2] for v in verts) / n
+        vol = 0.0
+        for f in comp:
+            co = [(v.co[0] - cx, v.co[1] - cy, v.co[2] - cz) for v in f.verts]
+            a = co[0]
+            for k in range(1, len(co) - 1):
+                b, c = co[k], co[k + 1]
+                vol += (a[0] * (b[1] * c[2] - b[2] * c[1]) + a[1] * (b[2] * c[0] - b[0] * c[2])
+                        + a[2] * (b[0] * c[1] - b[1] * c[0]))
+        if vol < 0:
+            bmesh.ops.reverse_faces(bm, faces=comp)
+            flipped += 1
+    return flipped
 
 
 # ------------------------------------------------------------------ primitives
