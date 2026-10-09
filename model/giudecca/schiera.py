@@ -137,6 +137,13 @@ STRAIGHT = 1e-4                  # m, a face corner whose vertex lies this close
 #                                  its two neighbours counts as straight (see _split_straight_corners)
 LINTEL_JOINT = 0.01              # m, joint between the paired north lintel blocks (n13)
 FLUE = dict(r=0.09, dx=0.13, dy=0.13, z0=5.40, top=7.85)   # twin flue pipes (spec 9, n5, n39)
+# --- interiors only (geo.THROUGH set, docs/INTERIORS.md; interior_schiera.py) ---
+KITCHEN_WIN = (29.46, 0.95, 1.43, 2.35)  # kitchen window onto the portico in each block side wall:
+#                                  centre Y, width, sill, head (n5 section C chain "24,5 | 95 | 74 | 91",
+#                                  n27, n37 "Tipo A1"); not in the exterior-only model
+CORE_IN = CORE_HW - 0.28         # 1.805 m: inner masonry face of the core walls (W2: render 20 + brick
+#                                  260, then the 55 lining to +-1.75; SE 60, layers.md W2)
+FLUE_Z0_INT = 5.67               # flue pipes start inside the vault's timber zone (not below the soffit)
 
 
 def m2E(m: float) -> float:
@@ -506,8 +513,15 @@ def _openings(ctx, body, tag, E0, E1, axes, bags):
             a = bf.coord - bf.out * 0.155
             b = bf.coord - bf.out * 0.195
             bm = bags['doors']
-            if bf.axis == 'x':
+            if bf.axis == 'x' and geo.THROUGH is None:
+                # stand-in leaf; with interiors the joinery builds the panelled door (type P)
                 _box(bm, a, b, ud - dw / 2 + 0.005, ud + dw / 2 - 0.005, 0.005, dh - 0.005)
+            if geo.THROUGH is not None:
+                # interiors: the kitchen window beside the door (0.95 x 0.92, sill 1.43)
+                Yk, wk, sk, hk = KITCHEN_WIN
+                rec = op.rect(bf, Yk, 0.0, sk, wk, hk - sk)
+                rec['type'] = 'F'               # "finestre schiera" family (SE 53 F), plain jamb
+                sills.append((bf, u_on(bf, Yk), wk, sk))
         # L1 window above each arch on the south face, 1.04 x 1.41 (3.95 -> 5.36)
         w, so, hd = WIN_STD
         op.rect(fs, p['c'], 0.0, T + so, w, hd - so)
@@ -541,7 +555,8 @@ def _openings(ctx, body, tag, E0, E1, axes, bags):
         fc = geo.Face('y', _panel_y()[0], -1)
         P = S['panel']
         for s in (-1, 1):
-            op.outline(fc, geo.circle_profile(xE(a) - s * P['dx'], P['oculus_z'], P['oculus_d'] / 2), 0.35)
+            if geo.THROUGH is None:     # with interiors the stairwell lies behind the panel
+                op.outline(fc, geo.circle_profile(xE(a) - s * P['dx'], P['oculus_z'], P['oculus_d'] / 2), 0.35)
     op.apply()
     # paving on the portico floors / thresholds and the terraces, plaster soffits
     geo.assign_material_by_normal(body, [
@@ -671,19 +686,29 @@ def _copper(ctx):
     h = math.sqrt(CORE_VAULT_R ** 2 - (zb - VAULT_CROWN + CORE_VAULT_R) ** 2)
     n = 16
     ft, fo, fi = FLASH
+    interiors = geo.THROUGH is not None
     for a in S['axes']:
         xa = xE(a)
         # copper vault R 6.00 spanning E-W, crown T+2.70 = 5.71 (spec 3 roof rule, SE 59, n5)
-        arc = [(xa - h + 2 * h * k / n, _vault_z(-h + 2 * h * k / n)) for k in range(1, n)]
-        geo.add_prism_y(bm, [(xa - h, zb), (xa + h, zb)] + list(reversed(arc)), y0, y1)
+        if interiors:
+            # with interiors the vault is hollow: a 1 mm copper sheet on the same surface, from
+            # one inner masonry face of the core walls to the other (it drops into the gutter
+            # inside the wall tops, SE 59); interior_schiera builds the build-up under it
+            m = 2 * n
+            top = [(xa - CORE_IN + 2 * CORE_IN * k / m, _vault_z(-CORE_IN + 2 * CORE_IN * k / m)) for k in range(m + 1)]
+            geo.add_prism_y(bm, top + [(x, z - 0.001) for x, z in reversed(top)], y0, y1)
+        else:
+            arc = [(xa - h + 2 * h * k / n, _vault_z(-h + 2 * h * k / n)) for k in range(1, n)]
+            geo.add_prism_y(bm, [(xa - h, zb), (xa + h, zb)] + list(reversed(arc)), y0, y1)
         # copper flashings on the core walls: the eave line at 5.49 (SE 59 "scossalina in rame")
         for s in (-1, 1):
-            xa_, xb_ = xa + s * fi, xa + s * (CORE_HW + fo)
+            xa_, xb_ = xa + s * (CORE_IN - 0.003 if interiors else fi), xa + s * (CORE_HW + fo)
             _box(bm, min(xa_, xb_), max(xa_, xb_), y0, y1, EAVE - ft + 0.005, EAVE + 0.005)
         # twin flue pipes on the party axis against the bar's south wall (spec 9, n5, n39)
         yc = yY(Y_BAR) - FLUE['dy']
         for s in (-1, 1):
-            _pipe(bm, xa + s * FLUE['dx'], yc, FLUE['r'], FLUE['z0'], FLUE['top'] - 0.07)
+            _pipe(bm, xa + s * FLUE['dx'], yc, FLUE['r'], FLUE_Z0_INT if interiors else FLUE['z0'],
+                  FLUE['top'] - 0.07)
             _pipe(bm, xa + s * FLUE['dx'], yc, FLUE['r'] + 0.03, FLUE['top'] - 0.07, FLUE['top'])
         # downpipe on the north face between the window pair, from the box gutter, standing
         # on the -0.45 paving; hopper and clips run 1 cm into the wall
@@ -808,7 +833,10 @@ def build(ctx):
         body = _body(ctx, tag, E0, E1, axes)
         _openings(ctx, body, tag, E0, E1, axes, bags)
     _trim(ctx, bags)
-    geo.object_from_bmesh(bags['doors'], 'SM_Schiera_Doors', ctx.col(COL), ctx.mats['M_Frame'])
+    if len(bags['doors'].faces):
+        geo.object_from_bmesh(bags['doors'], 'SM_Schiera_Doors', ctx.col(COL), ctx.mats['M_Frame'])
+    else:
+        bags['doors'].free()          # interiors: the joinery builds the door leaves
     _panels(ctx)
     _roofs(ctx)
     _copper(ctx)
