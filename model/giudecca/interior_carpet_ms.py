@@ -156,6 +156,7 @@ Z_CELL = -0.32                      # cellar floor (F4, SE 63)
 
 # doors: opening = leaf + 2 x 0.025 casing (bath leaf 0.70 "70/210", rooms 0.80, n67)
 DOOR_ROOM, DOOR_BATH, DOOR_HEAD = 0.85, 0.75, 2.10
+PARK_DEG = 60.0                     # doors hinged next to a court window: parked clear of the glazing
 DOOR_HEAD_S = 2.05                  # south row L1 landing | bedroom door, under the beam at T + 2.12 (n30 ~5.14)
 D_BATHDOOR = 1.305                  # bath doors, centre (n67 +0.91 -> +1.70)
 D_SDOOR = 1.22                      # south bedroom doors, centre (n67, n49 +0.91 -> +1.70; 6 cm toward the
@@ -441,16 +442,113 @@ def ER(E0, E1, Y0, Y1):
 
 
 def rec_rects(r):
-    """(u0, u1, z0, z1) rectangles an opening takes out of the wall linings:
-    the opening and its joinery pockets (as joinery.lining_cutter)."""
+    """(u0, u1, z0, z1) rectangles an opening takes out of the wall linings
+    (as joinery.lining_cutter): the opening, joinery.lining_boxes (reveal
+    pocket, niche, threshold; the lintel and the inner sill block stay behind
+    the lining), the window board built here (window_extras) and the local
+    thresholds (door_sills)."""
     kind = J.classify(r)
     if kind is None and r.get('through') is None:
         return []
     u0, u1, z0, z1 = J.dims(r)
-    out = [(u0, u1, z0, z1)]
-    for pu0, pu1, pz0, pz1, d0, d1 in J.pockets(r, kind) + window_pockets(r):
-        out.append((pu0, pu1, pz0, pz1))
+    out = [(u0, u1, z0, z1)] + J.lining_boxes(r, kind, board=False)
+    if 'ms_lintel' in r and z0 - J.floor_of(z0) > 0.5:
+        out.append((u0 - J.MAZ - 0.02, u1 + J.MAZ + 0.02, z0 - 0.023, z0 + 0.002))
+    th = sill_of(r, kind)
+    if th is not None:
+        out.append((u0, u1, th[0], z0))
     return out
+
+
+# plain-jamb openings whose frame sits forward in the wall: depth of the
+# finished inner face behind the outer face (masonry + lining)
+REVEAL_T = PL                       # plaster return on the reveals
+
+
+def reveal_depth(r, kind):
+    """Finished-face depth behind the outer face for the plain-jamb openings
+    whose reveal behind the frame would show bare brick: the stair windows K
+    and the garden doors DM in the 0.28 core walls, the terrace doors DM in
+    the 0.30 cross wall, the middle row's portoncini PM in the W1 passage
+    wall; None for the others (the south row's PM frame stands at the
+    finished face of its 0.26 door wall)."""
+    t = r.get('target') or ''
+    if kind == 'K' and t.startswith(('SM_Carpet_CoresM_', 'SM_Carpet_CoresS_')):
+        return C.CORE_W / 2 - D_CORE + LIN
+    if kind == 'DM':
+        return (C.CORE_W / 2 - D_CORE if r['axis'] == 'x' else (LM1 - LM0) * M) + LIN
+    if kind == 'PM' and t.startswith('SM_Carpet_SouthPavM_'):
+        return abs(r['coord'] - yY(MS0)) + LIN          # the passage face is Y 13.0: wall 0.37
+    return None
+
+
+def sill_of(r, kind):
+    """(z bottom, depth, material) of the threshold built here under a door
+    whose floor would otherwise be the wall's bare top: the garden doors DM
+    (RC soglia over the 10 cm step to the court, SE 53 C/D), the middle
+    row's portoncini PM (stone, as the south row's) - both from the outer
+    face to the finished inner face; the south row's PM (stone, the lobby's
+    slab top up, to the finished face); the terrace doors DM (RC, from the
+    hall's slab to the terrace level, built in HouseM.terrace)."""
+    t = r.get('target') or ''
+    u0, u1, z0, z1 = J.dims(r)
+    if kind == 'DM' and r['axis'] == 'x':
+        return z0 - 0.10, reveal_depth(r, kind), 'M_Concrete'
+    if kind == 'DM':
+        return Z2 - 0.10, reveal_depth(r, kind), None
+    if kind == 'PM' and t.startswith('SM_Carpet_SouthPavM_'):
+        return z0 - 0.03, reveal_depth(r, kind), 'M_Stone'
+    if kind == 'PM':
+        return GF_TOP, None, None
+    return None
+
+
+def door_sills(kit, recs):
+    """The thresholds of sill_of() that are built from the record (the
+    others belong to HouseM.terrace / HouseS.porch)."""
+    for r in recs:
+        kind = J.classify(r)
+        th = sill_of(r, kind)
+        if th is None or th[2] is None:
+            continue
+        u0, u1, z0, z1 = J.dims(r)
+        I.face_box(kit('Thresholds', th[2]), r, u0, u1, th[0], z0, 0.0, th[1])
+
+
+def sill_pockets(r):
+    """Brick the thresholds of door_sills replace (hollowing cutter); under
+    the garden doors 1 cm deeper, inside the court slab that runs under the
+    core wall (no pocket floor coplanar with the court's top at -0.10)."""
+    kind = J.classify(r)
+    th = sill_of(r, kind)
+    if th is None or th[2] is None:
+        return []
+    u0, u1, z0, z1 = J.dims(r)
+    zb = th[0] - (0.01 if kind == 'DM' else 0.0)
+    return [(u0, u1, zb, z0, -0.02, th[1] + 0.01)]
+
+
+def plain_reveals(kit, recs):
+    """Plaster returns (15) on the inner reveals of the plain-jamb openings
+    of reveal_depth(): jambs and head from the back of the frame to the
+    finished wall face (they also close the lining's cut edges), and the
+    sill of the stair windows K (layers.md W2: reveals plastered; the 45 deg
+    splay of the drawings is not modelled)."""
+    bm = kit('WindowReveals', 'M_PlasterInt')
+    t = REVEAL_T
+    for r in recs:
+        kind = J.classify(r)
+        db = reveal_depth(r, kind)
+        if db is None:
+            continue
+        sp = J.spec_for(kind)
+        u0, u1, z0, z1 = J.dims(r)
+        da = J._frame_depth(r, sp) + sp['frame'][1] + 0.002
+        I.face_box(bm, r, u0, u0 + t, z0, z1, da, db)                 # jambs
+        I.face_box(bm, r, u1 - t, u1, z0, z1, da, db)
+        I.face_box(bm, r, u0 + t, u1 - t, z1 - t, z1, da, db)         # head
+        if kind == 'K':
+            I.face_box(bm, r, u0 + t, u1 - t, z0, z0 + t, da, db)     # sill
 
 
 def _x_extent(o):
@@ -563,7 +661,7 @@ class Run:
             recs = self.recs(name)
             J.add_pockets(bm, recs)
             for r in recs:
-                for u0, u1, z0, z1, d0, d1 in window_pockets(r):
+                for u0, u1, z0, z1, d0, d1 in window_pockets(r) + sill_pockets(r):
                     I.face_box(bm, r, u0, u1, z0, z1, d0, d1)
             _hollow(self.ctx, o, bm)
         self.cut = {}
@@ -642,6 +740,8 @@ class SegBase:
         todo = [r for r in recs if not r.get('done')]
         n = J.build_openings(self.kit, recs)
         window_extras(self.kit, todo)
+        plain_reveals(self.kit, todo)
+        door_sills(self.kit, todo)
         self.kit.flush()
         print(f'[carpet ms] {self.row}{self.seg.tag}: {n} openings, joinery + flush {time.time() - t0:.1f} s')
 
@@ -850,7 +950,16 @@ class SegS(SegBase):
             R.cEY(name, t0, t1, y0, y1, S1, Z1 - 0.10)
             poly = ER(lo, hi, y0, y1)
             R.cprism(name, poly, Z1 - 0.10, roof_under(pav))
-            I.prism(kit('FloorSlab', 'M_Structure'), ER(b0, b1, y0, y1), S1, Z1 - 0.10)
+            if pav == 'SN':
+                # the shared vestibules' soffit fair-faced, as the porch in front (FloorSlabExposed)
+                ves = [(a - D_PORCH / M, a + D_PORCH / M) for a in p.axes]
+                for g0, g1 in C.minus_ranges(b0, b1, ves):
+                    I.prism(kit('FloorSlab', 'M_Structure'), ER(g0, g1, y0, Y_DW0), S1, Z1 - 0.10)
+                for v0, v1 in ves:
+                    I.prism(kit('FloorSlabExposed', 'M_Concrete'), ER(v0, v1, y0, Y_DW0), S1, Z1 - 0.10)
+                I.prism(kit('FloorSlab', 'M_Structure'), ER(b0, b1, Y_DW0, y1), S1, Z1 - 0.10)
+            else:
+                I.prism(kit('FloorSlab', 'M_Structure'), ER(b0, b1, y0, y1), S1, Z1 - 0.10)
             I.sloped_stack(kit, poly, roof_under(pav), BU.ROOF_TILE_UNDER, prefix='Roof', slope=ROOF[pav][1])
         R.cEY(self.ns, t0, t1, SN0 - EPS, SNI0, S1, Z1 - 0.10)
         R.cEY(self.ns, lo, hi, SN0 - EPS, SNI0, Z1 - 0.10, S2)
@@ -1250,9 +1359,10 @@ class HouseM(HouseBase):
         I.door(kit, h.P(s, D_AX, Y_BATHM), h.P(s, D_BAY - T_WET / 2, Y_BATHM), D_BATHDOOR - D_AX, DOOR_BATH,
                Z1 + DOOR_HEAD, Z1, T_WET - 0.002, hinge='b', swing=-s)
         self.door_floor(s, 'd', Y_BATHM, D_BATHDOOR, DOOR_BATH, T_WET, Z1, FL_OPEN)
-        # L1 north bedroom: bay wall, hinge at the S jamb, into the bedroom
+        # L1 north bedroom: bay wall, hinge at the S jamb, into the bedroom (parked at
+        # PARK_DEG: at 90 deg the leaf stood 8 cm behind the court window's inner light)
         I.door(kit, h.P(s, D_BAY, Y_DIVN1), h.P(s, D_BAY, MNI1), (Y_BDOOR_M - Y_DIVN1) * M, DOOR_ROOM,
-               Z1 + DOOR_HEAD, Z1, T_WET - 0.002, hinge='b', swing=-s)
+               Z1 + DOOR_HEAD, Z1, T_WET - 0.002, hinge='b', swing=-s, open_deg=PARK_DEG)
         self.door_floor(s, 'Y', D_BAY, Y_BDOOR_M, DOOR_ROOM, T_WET, Z1, FL_OPEN)
         # L1 south bedroom: into the bedroom (south)
         y = Y_LPM - T_PART / 2 / M
@@ -1326,7 +1436,7 @@ class HouseM(HouseBase):
         for s in (-1, 1):
             u0, u1 = sorted((self.X(s, TER_M['d'][0]), self.X(s, TER_M['d'][1])))
             S.register(f, u0, u1, zs, zs + TER_M['h'], S.core, 'DM')
-            I.prism(kit('Thresholds', 'M_Concrete'), I.rect(u0, u1, yY(LM0), yY(LM1)), Z2 - 0.10, zs)
+            I.prism(kit('Thresholds', 'M_Concrete'), I.rect(u0, u1, yY(LM0), yY(LM1 + LF)), Z2 - 0.10, zs)
 
 
 # -------------------------------------------------------------- south row
@@ -1488,16 +1598,17 @@ class HouseS(HouseBase):
     def doors(self, s):
         kit, h = self.kit, self
         # L0 kitchen: lobby | kitchen partition, hinge at the S jamb, into the kitchen
+        # (parked at PARK_DEG, clear of the court French door)
         I.door(kit, h.P(s, D_KM, Y_DWM), h.P(s, D_KM, SNI1), (Y_KDOOR_S - Y_DWM) * M, DOOR_ROOM, Z0 + DOOR_HEAD, Z0,
-               T_PART - 0.002, hinge='b', swing=-s)
+               T_PART - 0.002, hinge='b', swing=-s, open_deg=PARK_DEG)
         self.door_floor(s, 'Y', D_KM, Y_KDOOR_S, DOOR_ROOM, T_PART, Z0, FL_GF)
         # L1 bath: into the bath (north), hinge at the bay wall
         I.door(kit, h.P(s, D_AX, Y_BATHS), h.P(s, D_BAY - T_WET / 2, Y_BATHS), D_BATHDOOR - D_AX, DOOR_BATH,
                Z1 + DOOR_HEAD, Z1, T_WET - 0.002, hinge='b', swing=-s)
         self.door_floor(s, 'd', Y_BATHS, D_BATHDOOR, DOOR_BATH, T_WET, Z1, FL_OPEN)
-        # L1 north bedroom: bay wall, hinge at the S jamb, into the bedroom
+        # L1 north bedroom: bay wall, hinge at the S jamb, into the bedroom (PARK_DEG)
         I.door(kit, h.P(s, D_BAY, SNI0), h.P(s, D_BAY, SNI1), (Y_BDOOR_S - SNI0) * M, DOOR_ROOM, Z1 + DOOR_HEAD, Z1,
-               T_WET - 0.002, hinge='b', swing=-s)
+               T_WET - 0.002, hinge='b', swing=-s, open_deg=PARK_DEG)
         self.door_floor(s, 'Y', D_BAY, Y_BDOOR_S, DOOR_ROOM, T_WET, Z1, FL_INT)
         # L1 south bedroom: into the bedroom (south)
         y = Y_LPS - T_PART / 2 / M
@@ -1538,7 +1649,7 @@ class HouseS(HouseBase):
         for s in (-1, 1):
             u0, u1 = sorted((self.X(s, PORT['d'][0]), self.X(s, PORT['d'][1])))
             S.register(f, u0, u1, Z0, Z0 + PORT['h'], S.ns, 'PM')
-            I.prism(kit('Thresholds', 'M_Stone'), I.rect(u0, u1, yY(Y_DW0), yY(Y_DWM)), GF_TOP, Z0)
+            I.prism(kit('Thresholds', 'M_Stone'), I.rect(u0, u1, yY(Y_DW0), yY(Y_DWM + LF)), GF_TOP, Z0)
 
     # ---------------------------------------------------------- axis walls
     def axis_walls(self):
