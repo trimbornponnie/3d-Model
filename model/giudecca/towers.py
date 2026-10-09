@@ -84,6 +84,7 @@ HALL_WIN = (0.61, 10.46, (4.87, 6.15))          # E 2.86 wall: size, sill, centr
 STAIR_WIN = (0.61, ((4.835, 4.42), (4.835, 7.42), (7.59, 6.83), (7.59, 9.81)))
 ENTRANCE = dict(w=1.25, h=2.33, recess=0.30, door=(0.92, 2.04), jamb=0.05,
                 steps=3, step_w=1.55, tread=0.25)
+ENTRANCE_FRAME = 0.165   # interiors: street-door frame depth behind E 4.12 (interior_towers); the steps end on it
 # chimney stacks on the N / S end faces, corbelled out (n64 background, n39);
 # heights, width and depth from params.TOWER['chimney'] (measured on n64, SE 22,
 # Nov 1985, calibrated on the 13.12 / 11.93 lines of the same tower; spec §4):
@@ -309,7 +310,9 @@ class _Tower:
         doors = bmesh.new()
         fw, fs, fh = FRENCH
         for zf in FLOORS[:2]:
-            geo.opening(_behind(f_l3, P['depth']), doors, op.panes, ut, zf + fs, fw, fh - fs)
+            rec = geo.opening(_behind(f_l3, P['depth']), doors, op.panes, ut, zf + fs, fw, fh - fs)
+            if geo.THROUGH is not None:          # interiors: the joinery and hollowing find it by its body
+                rec['target'] = body.name
         mw, mp, ms, mh = MID_L2
         for sg in (-1, 1):
             dm = sg * (mw + mp) / 2
@@ -328,7 +331,8 @@ class _Tower:
         Ye_c = self.Ym0 + (en['jamb'] + en['w'] / 2) / MODULE
         op.rect(f_mid, Ye_c, 0.0, 0.0, en['w'], en['h'], recess=en['recess'], pane=False)
         ue = yY(Ye_c)
-        _pane(op.panes, f_mid, _rect(ue, en['w'] - 0.006, 0.003, en['h'] - 0.003), en['recess'] - 0.03)
+        if geo.THROUGH is None:                  # interiors: the joinery glazes the street door
+            _pane(op.panes, f_mid, _rect(ue, en['w'] - 0.006, 0.003, en['h'] - 0.003), en['recess'] - 0.03)
         op.apply()
         # the slot's tunnels, rooms and doors overlap one another, so they go in
         # separate exact differences (the cutter shells of one boolean never
@@ -507,21 +511,24 @@ class _Tower:
         en = ENTRANCE
         f = west_face(E_IN_MID)
         dw, dh = en['door']
-        bm = bmesh.new()
-        a, b = f.coord - f.out * (en['recess'] - 0.07), f.coord - f.out * (en['recess'] - 0.035)
-        _box(bm, a, b, ue - dw / 2, ue + dw / 2, 0.012, dh)
-        door = geo.object_from_bmesh(bm, self.name('Door'), self.ctx.col(COL_E), self.ctx.mats['M_Frame'])
+        door = None
+        if geo.THROUGH is None:                  # interiors: the joinery builds the street door
+            bm = bmesh.new()
+            a, b = f.coord - f.out * (en['recess'] - 0.07), f.coord - f.out * (en['recess'] - 0.035)
+            _box(bm, a, b, ue - dw / 2, ue + dw / 2, 0.012, dh)
+            door = geo.object_from_bmesh(bm, self.name('Door'), self.ctx.col(COL_E), self.ctx.mats['M_Frame'])
         # three steps from the calle (-0.45) to the threshold, 1.55 wide
         bm = bmesh.new()
         xf, tr = f.coord, en['tread']
         r = (0.0 - Z_PAVING) / en['steps']
-        prof = [(xf + en['recess'] - 0.07, Z_PAVING - 0.05)]
+        x_in = xf + (en['recess'] - 0.07 if geo.THROUGH is None else ENTRANCE_FRAME)
+        prof = [(x_in, Z_PAVING - 0.05)]
         prof.append((xf - en['steps'] * tr, Z_PAVING - 0.05))
         for i in range(en['steps']):
             x = xf - (en['steps'] - i) * tr
             z = Z_PAVING + (i + 1) * r + (0.01 if i == en['steps'] - 1 else 0.0)
             prof += [(x, z), (x + tr, z)] if i < en['steps'] - 1 else [(x, z)]
-        prof.append((xf + en['recess'] - 0.07, Z_PAVING + en['steps'] * r + 0.01))
+        prof.append((x_in, Z_PAVING + en['steps'] * r + 0.01))
         y_n = yY(self.Ym0)              # against the side of the north pavilion, shared face
         geo.add_prism_y(bm, prof, y_n - en['step_w'], y_n)
         steps = geo.object_from_bmesh(bm, self.name('Steps'), self.ctx.col(COL_E), self.ctx.mats['M_Paving'])
@@ -530,10 +537,10 @@ class _Tower:
     def build(self):
         body = self.body()
         sills, ue = self.openings(body)
-        objs = [body, bpy.data.objects[self.name('Glass')], self.trim(sills), self.roofs(),
+        objs = [body, bpy.data.objects.get(self.name('Glass')), self.trim(sills), self.roofs(),
                 self.copper(), self.masonry()]
         objs += list(self.entrance(ue))
-        return objs
+        return [o for o in objs if o is not None]   # (interiors: no glass panes, no door leaf)
 
 
 # ------------------------------------------------------------ water stairs

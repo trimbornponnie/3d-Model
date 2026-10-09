@@ -411,7 +411,7 @@ def _cut_linings(ctx, objs, recs):
     for o in objs:
         me.materials.append(o.data.materials[0])
     tmp = bpy.data.objects.new('CUT_LiningJoin', me)
-    ctx.cutters.objects.link(tmp)
+    ctx.root.objects.link(tmp)                 # evaluated only in a visible collection
     _cut_openings(ctx, tmp, recs, _lining_cutter(recs))
     bm = bmesh.new()
     bm.from_mesh(tmp.data)

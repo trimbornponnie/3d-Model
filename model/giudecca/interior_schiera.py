@@ -70,8 +70,8 @@ Y_C = X.Y_CORE                       # 32.93 terrace | lean-to high wall (outer 
 Y_HW = Y_C + dY(X.WALL)              # 33.154 lean-to high wall, inner face
 Y_PB = Y_C - dY(X.PANEL_Y[0])        # 32.785 oculus panel, back face
 Y_PL = Y_PB - dY(0.08)               # 32.736 panel lining face (SE 60 B-B "8 | 14 | 23")
-Y_BATH = 30.35                       # bathroom | landing partition axis (n45 30.30-30.40)
-Y_BED_DOOR = (30.43, 30.89)          # bedroom door jambs (n45)
+Y_BATH = 30.38                       # bathroom | landing partition axis (verified: n45 faces 30.35 / 30.41)
+Y_BED_DOOR = (30.46, 30.90)          # bedroom door jambs (n45, all 8)
 Y_FOOT = 33.194                      # foot riser (n27 33.19, n5 B)
 N_RISERS, RISER, GOING = 15, T1 / 15, 0.235          # n5 B: 15 risers; goings n27 / n45
 Y_LND = Y_FOOT - dY(N_RISERS * GOING)                 # 31.058 end of the top tread = landing edge
@@ -83,26 +83,28 @@ U_VD = 0.95                          # void edge, balustrade line "5"
 U_CL = 1.75                          # core lining face (SE 60)
 U_CM = X.CORE_IN                     # 1.805 core masonry face (W2)
 U_CO = X.CORE_HW                     # 2.085 core outer (render) face
-U_PART = (1.75, 1.86)                # bath + landing | bedroom partition, W7 0.11 (n45 1.74-1.86)
-U_BATH_DOOR = (0.93, 1.63)           # bathroom door jambs (n45 "70")
+U_PART = (1.75, 1.85)                # bath + landing | bedroom partition 0.10 (n45 written "10", u 1.73-1.87)
+U_BATH_DOOR = (0.92, 1.62)           # bathroom door 0.70 ("70/2,10"), hinge jamb u 1.62 (n45 0.97-1.62)
 U_BO = X.HALF * M                    # 3.6696 block side wall, outer face
 U_BS = U_BO - W1                     # 3.2746 block side wall, inner masonry face (L0)
 U_PP = U_BO - X.PARAPET_T            # 3.2996 terrace side parapet, inner face (as built)
-JOINT_LEAF = 0.185                   # W6 leaf at the expansion joint (+ 0.015 plaster)
+JOINT_LEAF = 0.185                   # joint leaf at L1: 0.20 with its plaster (n45 "20 | 9 | 20")
+BAY_WALL = 0.17                      # L1 wall over the portico partitions: 0.20 with plaster (n45 "20")
 
 # ------------------------------------------------------------------ levels (m)
 GF_SLAB = (B.GF_SOFFIT, B.GF_SOFFIT + 0.20)          # -0.32 -> -0.12
 RAW = T1 - B.FLOOR_T                 # 2.71 L1 slab soffit
 SLAB_TOP = RAW + 0.20                # 2.91
-Z_B1 = 2.35                          # beam B1 soffit (n5 A/B/F)
-Z_B2L = 2.56                         # beam B2 legs soffit (SE 60 A-A, n5 A)
-Z_B2M = 3.50                         # beam B2 middle soffit (SE 60 B-B)
-Z_BEAM = X.Z_BEAM                    # 3.98 top of B2 under the copertina
-Z_PARAPET = 3.93                     # parapet over the void in the bar S wall plane (n5 F, n37)
-Z_LINTEL = 5.08                      # landing -> core opening head (n45 "2,10", n5 F)
+Z_B1 = 2.40                          # beam B1 soffit (n5 F 2.33, A 2.46, B 2.42)
+Z_B2L_TOP = 3.87                     # beam B2 legs: flush with the slab soffit, top 3.87 (SE 60)
+B2_LEAF = 0.14                       # ... behind the terrace's 12 face brick + 2 (SE 60 A-A "12 | 2 | 25")
+Z_B2M = 3.56                         # beam B2 middle soffit (SE 60 B-B / elevation)
+Z_BEAM = X.Z_BEAM                    # 3.98 top of B2 middle under the copertina (as built)
+Z_PARAPET = 3.93                     # parapet over the void, L1 + 0.92 (n5 F)
+PARAPET_T = 0.10                     # ... in the plane of the bar's S face, Y 31.13-31.22 (n45)
+Z_LINTEL = T1 + 2.00                 # 5.01 landing -> core opening head (n5 F, both voids)
 Z_TERR = X.TERRACE_Z                 # 3.00 terrace finish (as built; n5 F "2,9x")
 DOOR_HEAD = T1 + 2.10                # internal doors 2.10 (SE 14 "70/2,10")
-DOOR_T = B.total(B.PARTITION) - 0.002   # interior.door: architraves then sit on the plaster faces
 
 # ------------------------------------------------------------------ stacks
 ROOF_STRUCT = [l for l in B.ROOF_TILE_UNDER if not l[0].startswith('Lining')]   # 205 under the tiles
@@ -115,7 +117,10 @@ PARTY_SEP = [('Plaster', 'M_PlasterInt', 0.015), ('Leaf', 'M_HollowBrick', 0.075
 PARTY_SPINE = B.WALL_SPINE                            # W4 200 in the core: the flights bear on it
 TERRACE_THIN = [('Tiles', 'M_Stone', 0.015), ('Bed', 'M_Screed', 0.020), ('Membrane', 'M_Membrane', 0.010),
                 ('Insulation', 'M_Insulation', 0.030), ('Falls', 'M_Screed', 0.015)]   # 90 on the slab
-PLASTER = [('Plaster', 'M_PlasterInt', 0.015)]        # on internal masonry (0.25 wall, joint leaves)
+PLASTER = [('Plaster', 'M_PlasterInt', 0.015)]        # on internal masonry (bay walls, joint leaves)
+PARTITION_10 = [('Plaster', 'M_PlasterInt', 0.010), ('Core', 'M_HollowBrick', 0.080),
+                ('Plaster', 'M_PlasterInt', 0.010)]   # partitions "10" (n45; W7 would be 110)
+DOOR_T = B.total(PARTITION_10) - 0.002  # interior.door: architraves then sit on the plaster faces
 FIN_INT = B.FLOOR_INT[:3]            # parquet, screed, fill (slab separate)
 FIN_OPEN = B.FLOOR_OPEN[:3]          # parquet, screed, insulation (over the porticoes)
 FIN_GF = B.FLOOR_GF[:4]              # parquet, screed, insulation, fill
@@ -169,7 +174,7 @@ def bedroom_end(a: float, s: int) -> tuple[float, str]:
         return abs(e_out - a) * M - W1, 'ext'
     if abs(e - X.JOINT_E) < 1e-6:
         return abs(e - a) * M - X.GAP / 2 - JOINT_LEAF, 'int'
-    return abs(e - a) * M - X.PART_T / 2, 'int'
+    return abs(e - a) * M - BAY_WALL / 2, 'int'
 
 
 def portico_end(a: float, s: int) -> float:
@@ -321,8 +326,9 @@ def _cutter(bm, zones, a):
     add(-U_CM, U_CM, Y_BO, Y_PB, RAW - 0.0088, 6.2, top=Z_LINTEL)         # core up through the vault
     add(-U_CM, U_CM, Y_PL, Y_HW, RAW - 0.0085, Z_BEAM + 0.07, top=Z_BEAM) # beam B2 middle zone
     add(-U_BS, U_BS, Y_HW, Y_SI, RAW - 0.0082, 4.6, top=TILE_LEAN)        # lean-to
-    add(-U_VD, U_VD, Y_BI - 0.003, Y_BO + 0.003, RAW - 0.0079, Z_PARAPET + 0.005)   # landing + spine
-    add(-U_CL, U_CL, Y_BI - 0.003, Y_BO + 0.003, Z_PARAPET, Z_LINTEL)     # opening over the parapets
+    add(-U_CL, U_CL, Y_BI - 0.003, Y_BO + 0.003, RAW - 0.0079, Z_LINTEL)  # landing opening + spine
+    for u0, u1, z0 in ((U_CM, U_BS, 2.9018), (-U_BS, -U_CM, 2.9021)):     # B2 legs inside the high wall
+        add(u0, u1, Y_C + dY(B2_LEAF), Y_HW, z0, Z_B2L_TOP, paint=False)
 
 
 def _pockets(r) -> list[tuple]:
@@ -486,7 +492,7 @@ def _dwelling(kit, dw: Dw):
     zb = GF_SLAB[1]
     _layers_box(kit, 'Wall', B.LINING, dw, U_PW, U_BS, Y_NI, None, zb, RAW, 'Y', +1)          # N wall
     _layers_box(kit, 'Wall', B.LINING, dw, U_PW, U_BS, Y_SI, None, zb, CEIL_LEAN, 'Y', -1)    # S wall
-    # block side wall: stepped top along Y (B1, terrace slab, B2 legs, lean-to)
+    # block side wall: stepped top along Y (B1, slab under the terrace and B2, lean-to)
     face_a, face_b = dw.p(U_BS, yNf), dw.p(U_BS, ySf)
     L = (ySf - yNf) * M
 
@@ -494,28 +500,28 @@ def _dwelling(kit, dw: Dw):
         return (Y - yNf) * M
     xs_ = dw.x(U_BS)
     tops = [(0.0, RAW), (sY(Y_BI), RAW), (sY(Y_BI), Z_B1 - PL), (sY(Y_BO), Z_B1 - PL), (sY(Y_BO), RAW),
-            (sY(Y_C), RAW), (sY(Y_C), Z_B2L - PL), (sY(Y_HW + dY(LIN)), Z_B2L - PL),
-            (sY(Y_HW + dY(LIN)), CEIL_LEAN(xs_, yY(Y_HW + dY(LIN)))), (L, CEIL_LEAN(xs_, yY(ySf)))]
+            (sY(Y_HW + dY(LIN)), RAW), (sY(Y_HW + dY(LIN)), CEIL_LEAN(xs_, yY(Y_HW + dY(LIN)))),
+            (L, CEIL_LEAN(xs_, yY(ySf)))]
     side = _door_cfg(face_a, face_b, 0.0, dw.p(U_BS - 1.0, 31.0))[1]       # room side of the face
     _wall(kit, face_a, face_b, _notched(L, zb, tops), B.LINING, 'Wall', side=side)
     # L0 ceilings: plaster under the L1 slab (kitchen, under the terrace)
     I.prism(pl, dw.poly([(U_PW, yNf), (U_BS - LIN, yNf), (U_BS - LIN, Y_BI - dY(PL)),
                          (U_VD - PL, Y_BI - dY(PL)), (U_VD - PL, Y_LND), (U_PW, Y_LND)]), RAW - PL, RAW)
-    I.prism(pl, dw.rect(U_CM, U_BS - LIN, Y_BO + dY(PL), Y_C - dY(PL)), RAW - PL, RAW)
-    # beam B1 under the bar's south wall (u 0.95 -> 3.275, soffit 2.35), plastered
+    I.prism(pl, dw.rect(U_CM, U_BS - LIN, Y_BO + dY(PL), Y_HW + dY(LIN)), RAW - PL, RAW)     # terrace + B2
+    # beam B1 under the bar's south wall (u 0.95 -> 3.275, soffit 2.40), plastered; the top of
+    # the flight bears on the landing slab beside it
     dw.box(beams, U_VD, U_BS, Y_BI, Y_BO, Z_B1, RAW)
     dw.box(pl, U_VD - PL, U_BS, Y_BI - dY(PL), Y_BO + dY(PL), Z_B1 - PL, Z_B1)               # soffit
     dw.box(pl, U_VD - PL, U_BS - LIN, Y_BI - dY(PL), Y_BI, Z_B1, RAW - PL)                     # north face
     dw.box(pl, U_VD - PL, U_CL, Y_BO, Y_BO + dY(PL), Z_B1, SLAB_TOP)                          # south face, void
     dw.box(pl, U_CL, U_BS - LIN, Y_BO, Y_BO + dY(PL), Z_B1, RAW - PL)                          # ... under the terrace
     dw.box(pl, U_VD - PL, U_VD, Y_BI, Y_BO, Z_B1, RAW)                                         # end face
-    # beam B2 legs under the lean-to's high wall (u 1.805 -> 3.275, soffit 2.56), plastered
-    dw.box(beams, U_CM, U_BS, Y_C, Y_HW, Z_B2L, SLAB_TOP)
-    dw.box(pl, U_CM, U_BS, Y_C - dY(PL), Y_HW + dY(LIN), Z_B2L - PL, Z_B2L)                    # soffit
-    dw.box(pl, U_CM, U_BS - LIN, Y_C - dY(PL), Y_C, Z_B2L, RAW - PL)                           # north face
-    dw.box(pl, U_CM - PL, U_CM, Y_PB, Y_HW + dY(LIN), Z_B2L - PL, SLAB_TOP)                   # end face + slab end
-    # lean-to: lining on the high wall above B2, sloping ceiling lining (R1 under the roof slab)
-    _layers_box(kit, 'Wall', B.LINING, dw, U_CM, U_BS, Y_HW, None, Z_B2L, CEIL_LEAN, 'Y', +1)
+    # beam B2 legs: RC inside the lean-to's high wall behind the terrace's face brick, on the
+    # slab (soffit flush with it, SE 60 A-A / elevation); plaster on the slab and beam ends
+    dw.box(beams, U_CM, U_BS, Y_C + dY(B2_LEAF), Y_HW, SLAB_TOP, Z_B2L_TOP)
+    dw.box(pl, U_CM - PL, U_CM, Y_PB, Y_HW, RAW - PL, Z_B2M - PL)
+    # lean-to: lining on the high wall, sloping ceiling lining (R1 under the roof slab)
+    _layers_box(kit, 'Wall', B.LINING, dw, U_CM, U_BS, Y_HW, None, RAW, CEIL_LEAN, 'Y', +1)
     I.sloped_stack(kit, dw.rect(U_PW, U_BS, Y_HW, Y_SI), RAW_LEAN, B.LINING, 'Ceiling', SLOPE_LEAN)
     # beam B2 middle (block object): soffit plaster per dwelling, south face strip
     I.prism(pl, dw.poly([(U_PW, Y_PL), (U_CL, Y_PL), (U_CL, Y_PB), (U_CM, Y_PB), (U_CM, Y_HW + dY(PL)),
@@ -524,16 +530,24 @@ def _dwelling(kit, dw: Dw):
 
     # ---------------- L1: slab, floors, linings, partitions, doors, ceiling
     slab = kit('FloorSlab', 'M_Structure')
-    I.prism(slab, dw.poly([(U_PW, Y_NI), (ue, Y_NI), (ue, Y_BI), (U_BS, Y_BI), (U_BS, Y_BO), (U_VD, Y_BO),
-                           (U_VD, Y_LND), (U_PW, Y_LND)]), RAW, SLAB_TOP)
-    I.prism(slab, dw.rect(U_CM, U_PP, Y_BO, Y_C), RAW, SLAB_TOP)                             # terrace slab
+    I.prism(slab, dw.poly([(U_PW, Y_NI), (ue, Y_NI), (ue, Y_BI), (U_BS, Y_BI), (U_BS, Y_BO), (U_FL, Y_BO),
+                           (U_FL, Y_LND), (U_PW, Y_LND)]), RAW, SLAB_TOP)
+    I.prism(slab, dw.poly([(U_CM, Y_BO), (U_PP, Y_BO), (U_PP, Y_C), (U_BS, Y_C), (U_BS, Y_HW),
+                           (U_CM, Y_HW)]), RAW, SLAB_TOP)                                        # terrace + B2
     # render under the slab over the portico (the passage ceiling, as built)
     up = min(portico_end(dw.a, s), ue)
     I.prism(kit('PorticoRender', 'M_Plaster'), dw.rect(U_BO, up, Y_NI, Y_BI), RAW - PL, RAW)
     yb0, yb1 = Y_BATH - dY(0.055), Y_BATH + dY(0.055)
     I.floor_stack(kit, dw.rect(U_PW, U_PART[0], yNf, yb0), T1, FIN_INT)                      # bathroom
-    I.floor_stack(kit, dw.poly([(U_PW, yb1), (U_PART[0], yb1), (U_PART[0], Y_BI), (U_VD, Y_BI),
-                                (U_VD, Y_LND), (U_PW, Y_LND)]), T1, FIN_INT)                 # landing
+    y_prp = Y_BO - dY(PARAPET_T)
+    I.floor_stack(kit, dw.poly([(U_PW, yb1), (U_PART[0], yb1), (U_PART[0], y_prp), (U_FL, y_prp),
+                                (U_FL, Y_LND), (U_PW, Y_LND)]), T1, FIN_INT)                 # landing
+    # parapet over the void in the plane of the bar's S face (0.92 high, n5 F; 0.10, n45)
+    yp = Y_BO - dY(PARAPET_T / 2)
+    Lq = U_CL - U_FL
+    _wall(kit, dw.p(U_FL, yp), dw.p(U_CL, yp), _notched(Lq, SLAB_TOP, [(0.0, Z_PARAPET), (Lq, Z_PARAPET)]),
+          PARTITION_10, 'Partition')
+    dw.box(pl, U_FL, U_CL, Y_BO - dY(PARAPET_T), Y_BO, Z_PARAPET, Z_PARAPET + PL)           # plaster cap
     bed = dw.rect(U_PART[1], uf, yNf, yBf)
     I.floor_stack(kit, bed, T1, FIN_INT[:2])                                                   # bedroom
     I.floor_stack(kit, dw.rect(U_PART[1], U_BS, yNf, yBf), T1 - 0.06, FIN_INT[2:])          # over the kitchen
@@ -548,20 +562,20 @@ def _dwelling(kit, dw: Dw):
     _layers_box(kit, 'Wall', B.LINING if ext else PLASTER, dw, ue, None, yNf, yBf, SLAB_TOP, CEIL_BAR, 'u', -1)
     # sloping ceiling lining under the bar roof slab (R1, SE 54 det. 3)
     I.sloped_stack(kit, dw.rect(U_PW, ue, Y_NI, Y_BI), RAW_BAR, B.LINING, 'Ceiling', SLOPE_BAR)
-    # partitions W7 0.11 to the finished ceiling, with their doors
+    # partitions 0.10 to the finished ceiling, with their doors
     xp = dw.x((U_PART[0] + U_PART[1]) / 2)
     a_, b_ = (xp, yY(Y_NI)), (xp, yY(Y_BI))
     Lp = (Y_BI - Y_NI) * M
     d0, d1 = ((Y - Y_NI) * M for Y in Y_BED_DOOR)
     tops = [(0.0, CEIL_BAR(xp, yY(Y_NI))), (Lp, CEIL_BAR(xp, yY(Y_BI)))]
-    _wall(kit, a_, b_, _notched(Lp, SLAB_TOP, tops, [(d0, d1, DOOR_HEAD)]), B.PARTITION, 'Partition')
+    _wall(kit, a_, b_, _notched(Lp, SLAB_TOP, tops, [(d0, d1, DOOR_HEAD)]), PARTITION_10, 'Partition')
     hinge, swing = _door_cfg(a_, b_, d1, dw.p(3.0, 30.0))
     I.door(kit, a_, b_, (d0 + d1) / 2, d1 - d0, DOOR_HEAD, T1, DOOR_T, hinge, swing, 90.0)
     a_, b_ = dw.p(U_PW, Y_BATH), dw.p(U_PART[0], Y_BATH)
     Lb = U_PART[0] - U_PW
     zt = CEIL_BAR(dw.x(1.0), yY(yb1))
     e0, e1 = U_BATH_DOOR[0] - U_PW, U_BATH_DOOR[1] - U_PW
-    _wall(kit, a_, b_, _notched(Lb, SLAB_TOP, [(0.0, zt), (Lb, zt)], [(e0, e1, DOOR_HEAD)]), B.PARTITION,
+    _wall(kit, a_, b_, _notched(Lb, SLAB_TOP, [(0.0, zt), (Lb, zt)], [(e0, e1, DOOR_HEAD)]), PARTITION_10,
           'Partition')
     hinge, swing = _door_cfg(a_, b_, e1, dw.p(1.0, 29.6))
     I.door(kit, a_, b_, (e0 + e1) / 2, e1 - e0, DOOR_HEAD, T1, DOOR_T, hinge, swing, 90.0)
@@ -586,7 +600,8 @@ def _dwelling(kit, dw: Dw):
     # balustrade on the void side: flat bars every 0.11, rail 1.00 above the nosings, stringer bar
     ub = (U_FL + U_VD) / 2
     p0 = Vector((*dw.p(ub, Y_FOOT + dY(0.02)), RISER - 0.20))
-    p1 = Vector((*dw.p(ub, Y_FOOT - dY((N_RISERS - 1) * GOING - 0.02)), T1 - 0.20))
+    s1 = (Y_FOOT - Y_BO) * M - 0.01                                     # up to the parapet's face
+    p1 = Vector((*dw.p(ub, Y_FOOT - dY(s1)), RISER + (s1 + 0.02) * RISER / GOING - 0.20))
     I.handrail(kit, [p0, p1], height=1.20, post_every=0.11, rail_d=0.035, post_d=0.014)
     I.handrail(kit, [p0, p1], height=0.0, rail_d=0.03, posts=False)
 

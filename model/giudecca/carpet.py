@@ -815,8 +815,9 @@ def build_middle(ctx, seg, bags):
         a0, a1 = a - m2E(NOTCH_HALF), a + m2E(NOTCH_HALF)
         op.box(a0, a1, yt0, yn1 + 0.08, NOTCH_TERRACE, 12.0)
         op.box(a0, a1, yn0 - 0.08, yt0 + 0.01, JOINTS['NM'][2], 12.0)
-        # terrace doors in the notch side walls (L2)
-        for fs in (west_face(a0), east_face(a1)):
+        # terrace doors in the notch side walls (L2); with the interiors the
+        # side walls are solid and carry the WC vent duct (n10, n79, n64)
+        for fs in ((west_face(a0), east_face(a1)) if geo.THROUGH is None else ()):
             op.rect(fs, (yt0 + LANDING_M[0]) / 2, 0.0, NOTCH_TERRACE, FRENCH[0], 8.37 - NOTCH_TERRACE)
         for s in (-1, 1):
             c = NM_ARCH
@@ -845,7 +846,12 @@ def build_middle(ctx, seg, bags):
     fN, fS = north_face(ys0), south_face(ys1)
     thick = (PASSAGE_M[0] - ys0) * M
     for a in part.axes:
-        op.rect(south_face(PASSAGE_M[0]), a, 0.0, 0.0, 1.10, 2.20)          # stair-core door off the passage
+        if geo.THROUGH is None:
+            op.rect(south_face(PASSAGE_M[0]), a, 0.0, 0.0, 1.10, 2.20)      # stair-core door off the passage
+        else:
+            # interiors: one portoncino 0.91 x 2.07 per dwelling at |dE| 0.305 -> 1.215 (n11, n49, SE 65)
+            for s in (-1, 1):
+                op.rect(south_face(PASSAGE_M[0]), a, s * 0.76, 0.0, 0.91, 2.07)
         for s in (-1, 1):
             c = L0_ARCH
             op.arch(fN, a, s * COURT_DX, Z0 - 0.1, c['w'], c['spring'], c['crown'], through=thick)
@@ -893,7 +899,11 @@ def build_south(ctx, seg, bags):
                 win(op, f, a, s * COURT_DX, FLOORS[1])
                 # kitchen doors at the back of the campo porch (n11, n49); the L1
                 # windows toward the campo are on the strip's face (build_campo)
-                op.rect(north_face(yn0), a, s * (ARCADE['central_pier'] + 1.22) / 2, 0.0, DOOR[0], DOOR[2])
+                if geo.THROUGH is None:
+                    op.rect(north_face(yn0), a, s * (ARCADE['central_pier'] + 1.22) / 2, 0.0, DOOR[0], DOOR[2])
+                else:
+                    # interiors: open passages porch -> vestibule, |dE| 0.26 -> 1.48, head 2.00 (n11, n76)
+                    op.rect(north_face(yn0), a, s * 0.87, 0.0, 1.22, 2.00, through=WALL)
             else:
                 two_light(op, f, a, s * COURT_DX, FLOORS[1] + WIN_STD[1], FLOORS[1] + WIN_STD[2])
     for E, inward in part.exposed():
@@ -982,6 +992,12 @@ def build_cores(ctx, block, row, bags):
         for f in (east_face(a - hw), west_face(a + hw)):
             for zf in floors:
                 for d in (-CORE_WIN_DY, CORE_WIN_DY):
+                    if geo.THROUGH is not None and row == 'M' and zf == 0.0:
+                        # interiors: at L0 the north window is the door to the court
+                        # garden, Y 10.62 -> 11.12, and there is no south window (n11, n64)
+                        if d < 0:
+                            op.rect(f, r['yc'], -1.04, 0.0, 0.83, 2.35)
+                        continue
                     op.rect(f, r['yc'], d, zf + CORE_WIN[1], CORE_WIN[0], CORE_WIN[2] - CORE_WIN[1])
     op.apply()
     if row == 'N':                   # L1 slab edge under the floating cores (n9)
