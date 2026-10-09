@@ -5,19 +5,21 @@ Conventions (see docs/ANALYSIS.md §2): 1 Blender unit = 1 m, +X east, +Y north,
 exact boolean solver and the manifold checks in validate.py stay reliable.
 
 Following the jasonkneen-3d-modeling skill (hard-surface workflow):
-- openings are cut with booleans, cutters live in a hidden "Cutters" collection,
-  the Exact solver is used, and every boolean is followed by a merge-by-distance
+- openings are cut with booleans, cutters live in a hidden "Cutters" collection
+  (renamed CUT_* by rename_cutters() so they never pass for SM_ meshes), the
+  Exact solver is used, and every boolean is followed by a merge-by-distance
   and a normal recalculation;
 - n-gons left by booleans are triangulated before export (validate.py).
 """
 from __future__ import annotations
 
 import math
+import re
 from typing import Iterable, Sequence
 
 import bmesh
 import bpy
-from mathutils import Matrix, Vector
+from mathutils import Vector
 
 EPS = 1e-4
 
@@ -212,6 +214,26 @@ def boolean_difference(target: bpy.types.Object, cutter_bm: bmesh.types.BMesh,
         bpy.data.objects.remove(cutter, do_unlink=True)
 
 
+def rename_cutters(cutters_col: bpy.types.Collection, prefix: str = 'CUT_') -> int:
+    """Give the cutter objects (and meshes) in `cutters_col` their own prefix:
+    SM_Tower_Body_E0_Cut1 -> CUT_Tower_Body_E0_1, SM_Carpet_CampoSouth_Cut ->
+    CUT_Carpet_CampoSouth. The SM_ prefix is kept for exportable static meshes
+    (skill: invalid-asset-naming). Returns the number of objects renamed."""
+    n = 0
+    for o in list(cutters_col.objects):
+        if o.name.startswith(prefix):
+            continue
+        base = o.name[3:] if o.name.startswith('SM_') else o.name
+        m = re.match(r'^(.*)_Cut(\d*)$', base)
+        if m:
+            base = m.group(1) + (f'_{m.group(2)}' if m.group(2) else '')
+        o.name = prefix + base
+        if o.data is not None and o.data.users == 1:
+            o.data.name = o.name
+        n += 1
+    return n
+
+
 def boolean_union(target: bpy.types.Object, others: Iterable[bpy.types.Object]) -> None:
     for o in others:
         mod = target.modifiers.new("Bool_Union", 'BOOLEAN')
@@ -235,6 +257,7 @@ def apply_modifiers(obj: bpy.types.Object) -> None:
         if m.name not in [x.name for x in me.materials if x]:
             me.materials.append(m)
     bpy.data.meshes.remove(old)
+    me.name = obj.name             # keep mesh names free of .001 suffixes in exports
 
 
 def cleanup(obj: bpy.types.Object, dist: float = EPS) -> None:
@@ -277,7 +300,10 @@ def assign_material_by_normal(obj: bpy.types.Object, rules) -> None:
 def world_box_uv(obj: bpy.types.Object, scale: float = 1.0) -> None:
     """World-scale box projection: faces facing ±X get (y, z), ±Y get (x, z),
     ±Z get (x, y). 1 UV unit = 1/scale m, so texel density is identical on every
-    object (skill: uv-unwrapping-strategy / texel-density-inconsistency)."""
+    object (skill: uv-unwrapping-strategy / texel-density-inconsistency).
+    Faces facing up or down that are pitched along x (a lean-to rising E-W) get
+    (y, x), so v always runs down the slope and the courses of the roof-tile
+    image stay parallel to the eaves; level faces keep (x, y)."""
     me = obj.data
     if not me.uv_layers:
         me.uv_layers.new(name='UVMap')
@@ -292,6 +318,8 @@ def world_box_uv(obj: bpy.types.Object, scale: float = 1.0) -> None:
                 u, v = co.y * (1 if n.x > 0 else -1), co.z
             elif ax == 1:
                 u, v = co.x * (-1 if n.y > 0 else 1), co.z
+            elif abs(n.x) > abs(n.y) + 1e-6:
+                u, v = co.y, co.x       # pitched along x: v runs down the slope, as on N-S pitches
             else:
                 u, v = co.x, co.y
             uv[li].uv = (u * scale, v * scale)

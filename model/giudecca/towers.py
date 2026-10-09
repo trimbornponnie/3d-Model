@@ -51,6 +51,8 @@ COL_E, COL_W = 'Towers_East', 'Towers_West'
 BAND_H = 0.13            # concrete head bands z_f+2.35 -> 2.48 (n61, n7)
 BAND_OUT = 0.02          # bands ~2 cm proud
 BAND_IN = 0.05           # ... and bedded 5 cm into the brick
+VERGE_IN = 0.20          # verges reach 20 cm in over the pavilion side walls (2 cm overhang outside)
+GUTTER_BED = 0.01        # copper gutters bedded 1 cm into the walls they hang on
 HEAD = 2.35              # window head above floor (SE 53)
 L3_BAND = (11.38, 11.51)                        # band on the L3 walls (n61, n16, n62)
 TERRACE_COPING = (9.84, TOWER['terrace_parapet'])   # parapet coping 9.84-9.97 (n61, n62)
@@ -83,13 +85,15 @@ STAIR_WIN = (0.61, ((4.835, 4.42), (4.835, 7.42), (7.59, 6.83), (7.59, 9.81)))
 ENTRANCE = dict(w=1.25, h=2.33, recess=0.30, door=(0.92, 2.04), jamb=0.05,
                 steps=3, step_w=1.55, tread=0.25)
 # chimney stacks on the N / S end faces, corbelled out (n64 background, n39);
+# heights, width and depth from params.TOWER['chimney'] (measured on n64, SE 22,
+# Nov 1985, calibrated on the 13.12 / 11.93 lines of the same tower; spec §4):
+# corbel 11.55 -> 11.90, stack 13.75 under a 0.10 cap, top 13.85. Local values:
 # projection 0.25 of the 0.45 depth (n64: the facing stacks of two towers leave
-# a clear gap in the 0.91 m slot). Heights measured on n64 (SE 22, Nov 1985,
-# calibrated on the 13.12 / 11.93 lines of the same tower): corbel 11.55 -> 11.90,
-# top 13.85 - lower than the spec's "bracket ~12.3, top ~14.2" (params), which
-# n64 does not bear out. E position not dimensioned (assumption: E 3.80).
-CHIMNEY = dict(TOWER['chimney'], corbel_bottom=11.55, bracket=11.90, top=13.85,
-               proj=0.25, e_centre=3.80, cap=0.10)
+# a clear gap in the 0.91 m slot), cap 0.10 (spec §4: stack top 13.75, cap
+# 13.85); E position not dimensioned (assumption: E 3.80).
+_CH = TOWER['chimney']
+CHIMNEY = {'w': _CH['w'], 'd': _CH['d'], 'corbel_bottom': _CH['bracket'][0], 'bracket': _CH['bracket'][1],
+           'top': _CH['top'], 'proj': 0.25, 'e_centre': 3.80, 'cap': 0.10}
 WATER_RISER = 0.155                              # 13 risers x 0.155 (n61, n8, n63)
 
 
@@ -116,6 +120,21 @@ def _tile_material(ctx) -> None:
 # ------------------------------------------------------------------ helpers
 def _box(bm, x0, x1, y0, y1, z0, z1):
     geo.add_box(bm, x0, x1, y0, y1, z0, z1)
+
+
+def _ring(bm, outer, inner, z0, z1):
+    """Closed rectangular ring (x0, x1, y0, y1 outer and inner) from z0 to z1,
+    one manifold solid."""
+    def rect(r, z):
+        x0, x1, y0, y1 = r
+        return [bm.verts.new(p) for p in ((x0, y0, z), (x1, y0, z), (x1, y1, z), (x0, y1, z))]
+    ob, ot, ib, it = rect(outer, z0), rect(outer, z1), rect(inner, z0), rect(inner, z1)
+    for k in range(4):
+        j = (k + 1) % 4
+        bm.faces.new((ob[k], ob[j], ot[j], ot[k]))       # outer side
+        bm.faces.new((ib[j], ib[k], it[k], it[j]))       # inner side
+        bm.faces.new((ot[k], ot[j], it[j], it[k]))       # top
+        bm.faces.new((ob[j], ob[k], ib[k], ib[j]))       # bottom
 
 
 def _face_box(bm, face, u0, u1, z0, z1, out, inside):
@@ -162,6 +181,12 @@ def _hall_z(x: float) -> float:
     r = (w * w + h * h) / (2 * h)
     d = x - xb
     return hi - r + math.sqrt(max(r * r - d * d, 0.0))
+
+
+def _hall_xs(xi: float, xs: float, n: int = 10) -> list[float]:
+    """x stations of the curved stair-hall roof between the inner face (xi)
+    and the hall wall E 2.86 (xs), shared by the brick body and the copper."""
+    return [xi + (xs - xi) * j / n for j in range(n + 1)]
 
 
 def _mirror_copy(obj, name: str, col) -> bpy.types.Object:
@@ -230,8 +255,7 @@ class _Tower:
                                 lambda bm: geo.add_prism_y(bm, lean, y0, y1)))
         # stair hall E 2.86 -> 4.12 under the curved copper roof
         xs, xi = xE(E_HALL), xE(E_IN_MID)
-        n = 10
-        arc = [(xi + (xs - xi) * j / n, _hall_z(xi + (xs - xi) * j / n) - 0.06) for j in range(n + 1)]
+        arc = [(x, _hall_z(x) - 0.06) for x in _hall_xs(xi, xs)]
         hall = [(xs, Z_FOUND), (xi, Z_FOUND)] + arc
         pieces.append(ctx.solid(self.name('Tmp2b'), COL_E, 'M_Brick',
                                 lambda bm: geo.add_prism_y(bm, hall, y0, y1)))
@@ -350,8 +374,9 @@ class _Tower:
             ya, yb = yl - s * 0.05, yh + s * 0.05
             za, zb = zl + m * (ya - yl), zl + m * (yb - yl)
             verge = [(ya, za - 0.01), (yb, zb - 0.01), (yb, zb + 0.11), (ya, za + 0.11)]
-            geo.add_prism_x(bm, verge, xb - 0.20, xb + 0.02)
-            geo.add_prism_x(bm, verge, xi - 0.02, xi + 0.20)
+            # (the tile slab stops at their inner faces - see roofs())
+            geo.add_prism_x(bm, verge, xb - VERGE_IN, xb + 0.02)
+            geo.add_prism_x(bm, verge, xi - 0.02, xi + VERGE_IN)
             # terrace parapet coping (U), 2 cm overhang
             t, o = TERRACE_T, 0.02
             xc = xb - 0.02
@@ -363,13 +388,11 @@ class _Tower:
                 z0 = zf + HEAD + 0.002
                 _face_box(bm, f_out, ylo, yhi, z0, z0 + BAND_H - 0.002, BAND_OUT, BAND_IN)
                 _face_box(bm, f_in, ylo, yhi, z0, z0 + BAND_H - 0.002, BAND_OUT, BAND_IN)
-            # L3 band 11.38 -> 11.51 round the L3 walls of the pavilion
+            # L3 band 11.38 -> 11.51 round the L3 walls of the pavilion: one closed
+            # ring (2 cm proud, 5 cm bedded), so the corners have no overlapping faces
             z0, z1 = L3_BAND
-            _face_box(bm, f_l3, ylo, yhi, z0, z1, BAND_OUT, BAND_IN)
-            _face_box(bm, f_in, ylo, yhi, z0, z1, BAND_OUT, BAND_IN)
-            xr0, xr1 = xi - 0.019, xb + 0.019
-            _box(bm, xr0, xr1, ye - s * BAND_IN, ye + s * BAND_OUT, z0, z1)
-            _box(bm, xr0, xr1, yi + s * BAND_IN, yi - s * BAND_OUT, z0, z1)
+            _ring(bm, (xi - BAND_OUT, xb + BAND_OUT, ylo, yhi),
+                  (xi + BAND_IN, xb - BAND_IN, ylo + BAND_OUT + BAND_IN, yhi - BAND_OUT - BAND_IN), z0, z1)
             # chimney cap
             ch = CHIMNEY
             xc0 = xE(ch['e_centre'])
@@ -388,7 +411,9 @@ class _Tower:
         top = L['spring'] + hh
         outline = ([(ut + hw / 2, L['spring']), (ut + L['w'] / 2, L['spring'])] + arc +
                    [(ut - L['w'] / 2, L['spring']), (ut - hw / 2, L['spring']), (ut - hw / 2, top), (ut + hw / 2, top)])
-        geo.add_prism_x(bm, outline, xb + 0.001, xb + 0.04)
+        # back face shared exactly with the wall face (bedding it into the wall
+        # would run its intrados into the slot's arch soffit, coplanar)
+        geo.add_prism_x(bm, outline, xb, xb + 0.04)
         # inside the slot, on the set-back plane (1 cm into the jambs): L0 lintel
         # band 2.35 -> 2.48, L1 slab edge, parapet coping to 3.98 (n61, n62 A-A)
         f_set = _behind(f_l3, S['set'])
@@ -403,7 +428,8 @@ class _Tower:
         _face_box(bm, f_l3, yY(self.Ym1) - 0.05, yY(self.Ym0) + 0.05, z0, z0 + BAND_H - 0.002, BAND_OUT, BAND_IN)
         # patio wall coping (top 1.26)
         e0, e1, ztop = TOWER['patio_wall']
-        _box(bm, xE(e1) - 0.02, xE(e0) + 0.02, yY(self.Ym1) + 0.001, yY(self.Ym0) - 0.001, ztop - 0.12, ztop)
+        # (ends shared exactly with the pavilions' outer bands, like the wall under it)
+        _box(bm, xE(e1) - 0.02, xE(e0) + 0.02, yY(self.Ym1), yY(self.Ym0), ztop - 0.12, ztop)
         return geo.object_from_bmesh(bm, self.name('Trim'), ctx.col(COL_E), ctx.mats['M_Concrete'])
 
     # ------------------------------------------------------- tiled roofs
@@ -413,7 +439,10 @@ class _Tower:
         for Ye, Yi in self.pavs:
             sec = pavilion_section(Yi, Ye, Z_FOUND, T)
             (yl, zl), (yh, zh) = sec[5], sec[4]
-            geo.add_prism_x(bm, [(yl, zl), (yh, zh), (yh, zh + 0.05), (yl, zl + 0.05)], xi, xb)
+            # between the verges (trim): the slab ends on their inner faces
+            # instead of running on under them with its soffit ~1 cm over theirs
+            geo.add_prism_x(bm, [(yl, zl), (yh, zh), (yh, zh + 0.05), (yl, zl + 0.05)],
+                            xi + VERGE_IN, xb - VERGE_IN)
         # lean-to over the outer rooms of the middle part
         x1, x2 = xE(E_BAND) + 0.06, xE(E_HALL)
         prof = [(x1, _lean_z(x1) - 0.05), (x2, _lean_z(x2) - 0.05), (x2, _lean_z(x2)), (x1, _lean_z(x1))]
@@ -426,20 +455,26 @@ class _Tower:
         y0, y1 = yY(self.Ym1), yY(self.Ym0)
         xs, xi = xE(E_HALL), xE(E_IN_MID)
         xa, xz = xs + 0.10, xi - 0.03
-        n = 12
-        xs_ = [xz + (xa - xz) * j / n for j in range(n + 1)]
+        # same stations as the body's hall top between the walls, so the
+        # shell's soffit lies exactly on it (different chords left slits <1 mm)
+        xs_ = [xz] + _hall_xs(xi, xs) + [xa]
         shell = [(x, _hall_z(x)) for x in xs_] + [(x, _hall_z(x) - 0.06) for x in reversed(xs_)]
         geo.add_prism_y(bm, shell, y0 - 0.02, y1 + 0.02)
-        # eave gutter of the stair hall (SE 59) and of the lean-to
-        _box(bm, xs + 0.005, xs + 0.17, y0 + 0.001, y1 - 0.001, 11.14, _hall_z(xa) - 0.09)
+        # eave gutter of the stair hall (SE 59) and of the lean-to, bedded 1 cm
+        # into the wall they hang on and into the pavilion walls at their ends
+        b = GUTTER_BED
+        _box(bm, xs - b, xs + 0.17, y0 - b, y1 + b, 11.14, _hall_z(xa) - 0.09)
         xl = xE(E_BAND)
-        _box(bm, xl + 0.005, xl + 0.17, y0 + 0.001, y1 - 0.001, 8.70, _lean_z(xl + 0.06) - 0.07)
-        # copper box gutters at the low end of the pavilion roofs
+        _box(bm, xl - b, xl + 0.17, y0 - b, y1 + b, 8.70, _lean_z(xl + 0.06) - 0.07)
+        # copper box gutters at the low end of the pavilion roofs, bedded 2 cm
+        # into the low wall (the tile slab ends on its inner face: 1 cm would
+        # leave the two end faces ~1 cm apart, near-coplanar)
         for Ye, Yi in self.pavs:
             sec = pavilion_section(Yi, Ye, Z_FOUND, T)
             yl, zl = sec[5]
             s = 1.0 if yY(Ye) > yY(Yi) else -1.0
-            _box(bm, xE(E_IN) + 0.01, xE(E_BAND) - 0.01, yl + s * 0.002, yl + s * 0.24, zl - 0.02, zl + 0.07)
+            # (ends 2 cm inside the side faces, under the verges)
+            _box(bm, xE(E_IN) + 2 * b, xE(E_BAND) - 2 * b, yl - s * 2 * b, yl + s * 0.24, zl - 0.02, zl + 0.07)
         return geo.object_from_bmesh(bm, self.name('Copper'), self.ctx.col(COL_E), self.ctx.mats['M_Copper'])
 
     # ------------------------------------------------ brick details
@@ -487,7 +522,7 @@ class _Tower:
             z = Z_PAVING + (i + 1) * r + (0.01 if i == en['steps'] - 1 else 0.0)
             prof += [(x, z), (x + tr, z)] if i < en['steps'] - 1 else [(x, z)]
         prof.append((xf + en['recess'] - 0.07, Z_PAVING + en['steps'] * r + 0.01))
-        y_n = yY(self.Ym0) - 0.001
+        y_n = yY(self.Ym0)              # against the side of the north pavilion, shared face
         geo.add_prism_y(bm, prof, y_n - en['step_w'], y_n)
         steps = geo.object_from_bmesh(bm, self.name('Steps'), self.ctx.col(COL_E), self.ctx.mats['M_Paving'])
         return door, steps
@@ -529,7 +564,11 @@ def _water_stairs(ctx, side: str):
         gaps.insert(0, (TOWER['y_first'] - TOWER['gap'], TOWER['y_first']))
     bm = bmesh.new()
     for Y0, Y1 in gaps:
-        geo.add_prism_y(bm, prof, yY(Y1) + 0.001, yY(Y0) - 0.001)
+        # full gap width: the end faces are shared exactly with the tower end
+        # walls (north of tower 0: with the land plate's quay face at Y -4.7765).
+        # Not bedded in: the flat top at -0.45 and the E 4.22 end would then lie
+        # in the planes of the plate's top / the towers' inner faces.
+        geo.add_prism_y(bm, prof, yY(Y1), yY(Y0))
     col = COL_E if side == 'E' else COL_W
     return geo.object_from_bmesh(bm, f'SM_Tower_WaterStairs_{side}', ctx.col(col), ctx.mats['M_Paving'])
 

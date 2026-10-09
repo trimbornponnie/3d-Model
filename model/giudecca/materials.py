@@ -1,12 +1,22 @@
 """PBR materials (Principled BSDF) named per the skill's convention (M_ prefix).
 
-Colours are given in sRGB 0-255 and converted to linear. Only base colour,
-metallic and roughness are used so the materials survive glTF/FBX export
-unchanged; a procedural brick bond is layered on top for Blender renders only.
+This module owns every M_ material of the model: the part modules look them up
+in ctx.mats and never create their own. Colours are given in sRGB 0-255 and
+converted to linear. Only base colour, metallic and roughness are used, so the
+materials survive glTF / FBX / OBJ export unchanged. Brick and roof tiles get a
+generated base-colour image (textures.py, 1 m x 1 m on the world-scale box UVs
+of geo.world_box_uv): an image texture is exported to every format, unlike a
+procedural node, which glTF drops (the GLB then shows the material white).
+
+Every shell of the model is closed and outward-facing, so the materials use
+backface culling: the GLB is written single-sided (doubleSided false) and a
+flipped normal shows up in any viewer instead of being hidden.
 """
 from __future__ import annotations
 
 import bpy
+
+from . import textures
 
 PALETTE = {
     # name: (sRGB, metallic, roughness)
@@ -20,49 +30,50 @@ PALETTE = {
     'M_Grass': ((92, 116, 64), 0.0, 1.0),
     'M_Water': ((44, 76, 84), 0.0, 0.06),
     'M_Plaster': ((214, 204, 186), 0.0, 0.9),     # rendered walls ("intonaco")
+    'M_RoofTile': ((164, 86, 62), 0.0, 0.8),      # clay tiles ("tegole", SE 54)
+    'M_Stone': ((222, 216, 202), 0.0, 0.7),       # Istrian stone copings, steps, grid lines
+    'M_Foliage': ((74, 98, 50), 0.0, 0.95),
+    'M_Bark': ((86, 70, 56), 0.0, 0.9),
+    'M_Wood': ((112, 94, 74), 0.0, 0.85),         # weathered oak mooring poles
 }
 
+# material -> generator of its base-colour image (T_<Asset>_D, textures.py)
+TEXTURES = {'M_Brick': textures.brick, 'M_RoofTile': textures.roof_tile}
 
-def _lin(c: int) -> float:
+
+def srgb_to_linear(c: int) -> float:
+    """One sRGB channel 0-255 -> linear 0-1."""
     c = c / 255.0
     return c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4
 
 
-def make_materials(brick_procedural: bool = True) -> dict[str, bpy.types.Material]:
+_lin = srgb_to_linear          # old private name
+
+
+def linear_rgba(rgb) -> tuple[float, float, float, float]:
+    return tuple(srgb_to_linear(c) for c in rgb) + (1.0,)
+
+
+def make_materials(textured: bool = True, texture_dir: str | None = None) -> dict[str, bpy.types.Material]:
+    """Create (or update) every material of PALETTE.
+
+    textured: drive M_Brick and M_RoofTile's Base Color with their generated
+    images (packed into the .blend and embedded in the GLB); False gives the
+    plain colour only. texture_dir: also write the images there as PNG, so
+    that FBX / OBJ exported to that folder can reference them."""
     mats = {}
     for name, (rgb, metal, rough) in PALETTE.items():
         m = bpy.data.materials.get(name) or bpy.data.materials.new(name)
         m.use_nodes = True
         nt = m.node_tree
         bsdf = nt.nodes.get('Principled BSDF')
-        col = tuple(_lin(c) for c in rgb) + (1.0,)
-        bsdf.inputs['Base Color'].default_value = col
+        col = linear_rgba(rgb)
+        bsdf.inputs['Base Color'].default_value = col     # also the FBX / OBJ diffuse colour (Kd)
         bsdf.inputs['Metallic'].default_value = metal
         bsdf.inputs['Roughness'].default_value = rough
         m.diffuse_color = col
-        if name == 'M_Brick' and brick_procedural:
-            _brick_nodes(nt, bsdf, col)
+        m.use_backface_culling = True
+        if textured and name in TEXTURES:
+            textures.attach(m, TEXTURES[name](texture_dir))
         mats[name] = m
     return mats
-
-
-def _brick_nodes(nt, bsdf, col) -> None:
-    """Brick bond at real scale (course 7.0 cm incl. joint, SE 59; brick ~26 cm),
-    driven by the world-scale box-projected UVs from geo.world_box_uv
-    (1 UV unit = 1 m, uniform texel density). Render-only."""
-    tex = nt.nodes.new('ShaderNodeTexBrick')
-    coord = nt.nodes.new('ShaderNodeTexCoord')
-    mapping = nt.nodes.new('ShaderNodeMapping')
-    nt.links.new(coord.outputs['UV'], mapping.inputs['Vector'])
-    nt.links.new(mapping.outputs['Vector'], tex.inputs['Vector'])
-    tex.inputs['Scale'].default_value = 1.0
-    tex.inputs['Brick Width'].default_value = 0.26
-    tex.inputs['Row Height'].default_value = 0.07
-    tex.inputs['Mortar Size'].default_value = 0.008
-    tex.offset = 0.5
-    c1 = col
-    c2 = tuple(min(1.0, v * 1.18) for v in col[:3]) + (1.0,)
-    tex.inputs['Color1'].default_value = c1
-    tex.inputs['Color2'].default_value = c2
-    tex.inputs['Mortar'].default_value = (0.55, 0.52, 0.47, 1.0)
-    nt.links.new(tex.outputs['Color'], bsdf.inputs['Base Color'])

@@ -180,9 +180,12 @@ the lower row's high wall (10.12 / 7.10) (n64, n18, n33, n70, n35).
   south rows.
 * **Notches**: the north row's south pavilion and the middle row's north
   pavilion are interrupted on **every core axis** by a 2.97 m bay (axis ±
-  1.485 m). In the north row the bay cuts the top floor and roof: it holds the L3
-  stair landing under the core's copper vault and is closed to the south by the
-  **oculus panel** (§5.5). In the middle row the bay is cut down to an L2 terrace.
+  1.485 m). In the north row the bay cuts the top floor and roof: the L3 stair
+  landing runs under the core's copper vault to a cross wall at Y ≈ 5.87 → 6.05
+  (n18), south of which the bay is an open L3 terrace on the 9.15 deck, closed
+  at the joint's south edge by the **oculus panel** (§5.5). In the middle row the
+  core and landing are roofed north to a cross wall at Y ≈ 8.95 → 9.13 (n18,
+  "8,72"), leaving only a ≈ 1.9 m L2 terrace (Y 8.0 → 8.95).
   All other pavilions run continuously along each segment (n57, n66, n59, n35).
 
 ### 5.3 What is built on each floor (n53, n34, n33, n70, SE 8–17)
@@ -204,7 +207,14 @@ the lower row's high wall (10.12 / 7.10) (n64, n18, n33, n70, n35).
   pier on the axis, L-shaped corner piers at the slot, T piers on E 35.5 / 48.5),
   height −0.45 → 5.06 plus a concrete band to 5.80 (n11, n72).
 * Two narrow straight stairs (0.9 m) rise from the campo to the gallery,
-  on the axes of the court arches at E 36.5 and 47.5 (n11), Y 5.6 → 1.7.
+  on the axes of the court arches at E 36.5 and 47.5 (n11), Y 5.6 → 1.7, with
+  brick side walls, a sloping concrete coping and a block newel at the foot (n29, n59).
+* **South strip** Y 15.0 → 15.776 (the M/S joint across the campo houses): two
+  storeys — an L0 arcade with an open entrance porch on each house axis (kitchen
+  doors behind, cellar doors in its side walls) and cellar fronts in the outer
+  bays; L1 rooms reaching Y 15.0; a roof terrace at 6.15 with a parapet coped to
+  6.90 just in front of the south row's 7.10 coping (n17, n29, n49, n11, n35).
+* Campo floor: stone grid one module apart, as in the square (n35).
 * The red 7 × 5 grid on n1 is the 2018 pavilion installation — **not** modelled.
 
 ### 5.5 Façades (n16, n14, n15, n59, n47, n48, n49, n77, n9, SE 50/51/53/66)
@@ -237,8 +247,10 @@ Offsets are in metres from the house axis.
 * **Core faces** toward the courts: two 0.60 × 0.60 landing windows per floor
   (z_f + 1.20 → 1.80) at the core-zone mid-line ± 1.08 m; vault eaves with copper
   gutter at T + 2.48.
-* **Oculus panel** (north row, closing each L3 notch at Y ≈ 7.16–7.22, facing
-  south over the joint terrace; n60, n47, n50): precast concrete, lower part
+* **Oculus panel** (north row, closing each L3 notch at the joint's south edge,
+  Y ≈ 7.79–7.92, just in front of the middle row's north wall; n18 7.73–7.86,
+  n17 7.76–7.89; in the campo houses in the plane of the L3 terrace parapet,
+  Y ≈ 8.10–8.22; n60, n47, n50): precast concrete, lower part
   2.95 m wide from 9.02 to 10.10, upper part 3.76 m wide from 10.10 to an arc of
   R 6.50 with crown **11.92**; two oculi Ø 0.90 at z 10.67, axis ± 0.825.
 * **North-row south face above the joint** (L3): French doors 1.04 at ±3.30
@@ -253,9 +265,14 @@ Offsets are in metres from the house axis.
   north-row core zone; L0 arch in the north row's south pavilion and at the
   passage of the middle row; low walls (1.25) closing the middle- and south-row
   half-courts; core side faces with their square windows; otherwise blank.
-* **Chimneys**: corbelled stacks on the south faces of the pavilion blocks on
-  the party walls and joints — north row up to ≈ 14.0 (2 + 2 or 4 flues),
-  middle row up to ≈ 10.9 (n47, n64, n39).
+* **Chimneys**: groups of separate slender flues on the south faces of the
+  north- and middle-row south pavilions (n47, n64, n39, n35): shafts ≈ 0.19 m at
+  0.30 m centres, each on its own 0.26 m base block corbelled out from the
+  top-floor head band (T + 2.46 → T + 2.87: north row 11.48 → 11.89, as on the
+  towers), two collars and a pointed cap to T + 4.85 (north 13.87, middle 10.87).
+  North row: 4 flues on an ordinary party wall, 2 + 2 at an expansion joint,
+  2 + 1 at the campo party walls, 1 next to each slot face. Middle row: 2 on a
+  party wall, 1 + 1 at a joint, 1 inside its campo end.
 
 ## 6. Schiera (SE 44–49, n5, n6, n13, n37, n40)
 
@@ -263,7 +280,8 @@ Offsets are in metres from the house axis.
   the axes on their inner faces.
 * **North bar** Y 28.78 → 31.22 (a 4.04 m pavilion), continuous over the full
   length, two storeys; mono-pitch roof rising **south**: coping 5.91 on the
-  north wall, 7.10 on the south wall. Expansion joint on E 23.5.
+  north wall, 7.10 on the south wall. Expansion joint on E 23.5 (9 cm double
+  wall, n13 / n27 / n45; the lintel bands stop either side of it).
 * **Four blocks** on party axes E **35.5, 27.5, 19.5, 11.5**, each 7.34 m wide
   (axis ± 2.224 module), two mirrored dwellings. At L0 one deep volume Y 28.78 →
   35.22 (kitchen north, living room south). Above L0:
@@ -301,7 +319,14 @@ Offsets are in metres from the house axis.
   the south (≈ 8 m, Y 35.25 → 40.5) with a small arched footbridge at
   E ≈ 4.4–5.5. The towers rise straight from the water.
 * **Garden** north of the complex E ≈ 11 → 55, Y ≈ −26.5 → −4.7, walled, with
-  trees.
+  trees; planted side strips beyond paved N–S paths (NE: E ≈ 0 → 8.4, NW:
+  E ≈ 56.9 → 72) and an E–W calle along its north side (Y ≈ −30 → −26.5) (n2, n36, n71).
+* **Bridges**: Ponte dei Lavraneri over the canal to Sacca Fisola (deck ≈ 3 m
+  wide at Y ≈ −25.2 → −23.35, n2, n32, n36), a small arched bridge over the rio di
+  S. Biagio at the north-east (Y ≈ −26.45 → −24.75), and the footbridge over the
+  southern rio.
+* **Water stair** on the square's south quay, beside the schiera at
+  E ≈ 40.7 → 41.6 with the quay notch E 39.72 → 40.7 (n53).
 
 ## 8. Materials
 
@@ -318,9 +343,10 @@ Offsets are in metres from the house axis.
 
 | Item | Evidence | Model |
 |---|---|---|
-| Middle-row north-pavilion notch depth (L2 terrace) | medium (n66, n57) | notch cut down to the L2 floor |
-| Chimney flue counts and exact sections | medium | simple corbelled stacks with caps at the stated tops |
+| Middle-row north-pavilion notch depth (L2 terrace) | medium (n18, n66, n57) | core roofed north to Y ≈ 9.0; 1.9 m terrace |
+| Chimney flue sections and caps | medium (n47, n64 at 1:50) | flue groups as §5.5; cap shape simplified |
+| Campo L2 south face | n17 ≈ 8.04 vs n11/n34 8.24 | 8.24 (plans) |
 | Window frames, glazing bars, reveals | not in the 1:50 sheets | glass set 0.12 m back; mullions only where drawn (trifore, two-lights) |
 | Schiera flue pipes | low (n5, n39) | small twin pipes, top 7.85 |
 | West-column water stairs | mirrored from the east column | mirrored |
-| Site beyond the complex | approximate (site plans) | simple ground, water and garden only |
+| Site beyond the complex | approximate (site plans n2, n36, n53) | ground, water, gardens, bridges and quay stair; neighbouring buildings not modelled |

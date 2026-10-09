@@ -6,28 +6,41 @@ Drawings: n2 / n32 (site / roof plan), n36 (site axonometric), n71
 (axonometric with the square grid and the mooring poles), n81 (study model from
 the east: walled north garden with ~16 trees, arched footbridge at the
 south-east), n52 (urban profiles: the footbridge arch), n53 (L0 plan: garden
-walls and gates), n11 / SE 8 (south-row gardens), n20 / SE 63 (levels -0.45 /
--0.10, garden wall to +1.22, precast steps 35/13 at the garden entrances).
+walls and gates, the water stair on the square's quay), n11 / SE 8 (south-row
+gardens), n20 / SE 63 (levels -0.45 / -0.10, garden wall to +1.22, precast
+steps 35/13 at the garden entrances).
 
 Objects (collection COL_Site; skill: one object per element, closed solids,
 quads wherever the shape allows, real metric scale):
   SM_Site_Water              thin water slab at -2.50 ("medio mare")
   SM_Site_Plate              land plate between and north of the tower
-                             columns: paving top at -0.45, flush Istrian-stone
-                             coping strip 0.30 m along the water edges, brick
-                             quay walls down to -2.60; notched for the tower
-                             water stairs, under the towers only below -0.45
+                             columns, up to the calle north of the garden:
+                             paving top at -0.45, flush Istrian-stone coping
+                             strip 0.30 m along the water edges and flush
+                             Istrian-stone grid lines in the open square
+                             (inlaid in the plate top, so nothing lies on the
+                             paving to z-fight with it), brick quay walls down
+                             to -2.60; notched for the tower water stairs and
+                             the square's water stair, under the towers only
+                             below -0.45
   SM_Site_Banks              far banks: S. Biagio east bank, south block,
                              north land (Molino Stucky side), Sacca Fisola
-  SM_Site_SquareGrid         Istrian-stone grid lines of the open square
+  SM_Site_WaterStair         water stair on the square's south quay (n53)
   SM_Site_GardenLawn_South / SM_Site_GardenWalls_South /
   SM_Site_GardenSteps_South  south-row gardens, walls to +1.22, gates + steps
   SM_Site_GardenLawn_North / SM_Site_GardenWalls_North /
   SM_Site_GardenCoping_North / SM_Site_GardenSteps_North
                              walled garden north of the complex
-  SM_Site_TreeTrunks / SM_Site_TreeCrowns   ~16 low-poly trees
+  SM_Site_GardenLawn_Side / SM_Site_GardenWalls_Side / SM_Site_GardenSteps_Side
+                             garden strips north of the two tower columns,
+                             beyond the N-S paths that flank the walled garden
+  SM_Site_TreeTrunks / SM_Site_TreeCrowns   ~24 low-poly trees (16 in the walled garden)
   SM_Site_Footbridge / SM_Site_FootbridgeParapet  arched footbridge over the
                              south rio, solid parapets
+  SM_Site_BridgeSBiagio / SM_Site_BridgeSBiagioParapet  arched footbridge over
+                             the rio di S. Biagio at the east end of the calle
+  SM_Site_BridgeLavraneri / SM_Site_BridgeLavraneriRailing  Ponte dei
+                             Lavraneri to Sacca Fisola at the west end of the calle
   SM_Site_MooringPoles       wooden poles ("pali") at the water stairs and the square
 
 Rectilinear solids are built by _grid_solid(): the union of axis-aligned
@@ -67,10 +80,43 @@ SACCA_E1 = 125.0                  # western limit of the Sacca Fisola bank (beyo
 TUCK = 0.02                       # m, plate strips under the towers stop this far inside the
                                   # tower end walls, so no plate face is coplanar with a tower face
 
+CALLE_N = -30.0                   # north edge of the plate: n2 (calibrated on the tower columns
+                                  # E -0.2 / 72.2 and the towers' N / S faces Y -4.225 / 35.225)
+                                  # draws an E-W calle ~5 m wide along the garden's north side,
+                                  # Y -30 -> -27, jogging south to Y ~-25 at both bridge landings;
+                                  # the built blocks north of it (not modelled) start at Y -30
+
 # open square: stone grid (n71, n36: ~1 module); lines on the carpet's half-module
-# axes along E (they continue the garden cross walls 42.5 + 3k) and on whole Y
+# axes along E (they continue the garden cross walls 42.5 + 3k) and on whole Y. They are
+# inlaid flush in the plate top (stone cells of SM_Site_Plate): a separate strip on the
+# paving would z-fight with it at any viewing distance. The lines stop at the front of
+# the tower entrance steps (towers.ENTRANCE) and at the square's water stair.
 GRID_W = 0.16                     # m, width of the stone lines (approx., n71)
-GRID_Z = (Z_PAVING - 0.02, Z_PAVING + 0.002)   # lines 2 mm proud of the paving
+
+# water stair on the square's south quay (n53 L0 plan, 8x zoom calibrated on the schiera's
+# west face E 39.72, the east gardens' end wall E 41.72 and the Y grid): a flight of 5 steps
+# parallel to the quay, hatched over E ~41.6 -> 40.7, Y 34.5 -> 35.25, descending east into a
+# notch of the quay line E ~40.7 -> 39.72 that opens onto the rio, next to the schiera's
+# south-west corner (the bricola at E 41.7 moors there). Bottom landing at ~ high water.
+SQ_STAIR = dict(e=(39.72 + 0.02 / M, 41.6),        # notch; 2 cm off the schiera's west face
+                y=34.5, risers=5, riser=0.155, tread=0.30)
+
+# side gardens north of the two tower columns (n2: stippled strips outlined like the other
+# garden walls; n71, n36, n39: trees from tower column to tower column). Drawing rectangles
+# (E0, E1, Y0, Y1) incl. walls, measured on n2: a N-S path ~2.5-4 m wide separates each strip
+# from the walled garden (E 55.0 -> 56.9 and E 8.4 -> 11.0); the footprints of the two
+# existing houses that n2 draws in the strips (hipped roof at the Ponte dei Lavraneri landing,
+# E 66.1 -> 72.9 / Y -23 -> -13; small house E 0.2 -> 3.0 / Y -24.2 -> -20) stay paved, as
+# site buildings are not modelled (spec 9). South ends: n2 ~Y -10 / -7 (chamfered; stepped
+# here), and next to the NW tower a 2.3 m paved passage to its north face. Walls as the
+# south-row gardens (0.30, top +1.22, assumption), a gate onto the calle at `gate` (E).
+_QW = QUAY_BAND / M               # the walls stop at the inner edge of the quay coping
+SIDE_GARDENS = {
+    'NW': dict(rects=[(56.9, 66.1, -23.2, -13.0), (56.9, 72.2 - _QW, -13.0, -10.0),
+                      (61.5, 72.2 - _QW, -10.0, -5.6)], gate=61.5, trees=6),
+    'NE': dict(rects=[(3.0, 8.4, -24.2, -20.0), (-0.2 + _QW, 8.4, -20.0, -11.0),
+                      (-0.2 + _QW, 5.5, -11.0, -7.2)], gate=5.7, trees=4),
+}
 
 # south-row gardens (SE 63, n11, n53)
 GW_T = 0.30                       # m, garden wall thickness (spec 7)
@@ -94,6 +140,27 @@ TREES = dict(count=16, seed=1985, min_dist=8.0, margin=3.0,
 # blocks at the feet. 17 risers x 0.15 from the paving to the crown landing at +2.10.
 FB = dict(risers=17, tread=0.30, landing=2.80, deck=2.10, crown=1.75, spring=-0.40,
           abut_proud=0.03, parapet_t=0.24, parapet_h=0.90, end_block=0.45)
+Z_BRIDGE_FOOT = Z_WATER - WATER_T - 0.02    # abutment / pier feet 2 cm under the water slab's
+                                            # bottom (was 1 cm: near-coplanar with it)
+
+# bridge over the rio di S. Biagio at the east end of the calle (n2: E -0.2 -> -7 at Y
+# -26.5 -> -24.7, ~2.9 m wide; n36: a humped bridge with solid parapets; n81: a curved element
+# beyond the north end of the east tower column). Same build as the south footbridge; the
+# rio is 11.2 m wide, so 20 risers x 0.15 on 0.32 treads to a 2.40 m crown landing at +2.55,
+# intrados crown +1.80 (assumption; keeps the deck >= 0.30 thick over the steeper arch).
+FB_NE = dict(FB, risers=20, tread=0.32, landing=2.40, deck=2.55, crown=1.80, y=(-26.45, -24.75))
+
+# Ponte dei Lavraneri to Sacca Fisola (n2 / n32 site plans, INDEX n2 "canal + bridge to the
+# west"; n36 site axonometric). n2 (8x zoom): a long stepped footbridge, treads drawn along its
+# whole length and a flat landing ~8 m long at the crown, six piers drawn as pointed lenses
+# ~6.3 modules apart, deck Y -25.2 -> -23.35 (~3.0 m), landing on the Giudecca quay where the
+# calle north of the garden starts. n36: a shallow continuous arch on V-shaped supports, light
+# railings. It spans the model's canal (E 72.2 -> 108, spec 7 "~60 m") with equal spans; rise
+# ~3 m (n36: sagitta of the deck line, assumption). Uniform risers on a circular nosing line,
+# so the treads lengthen towards the crown and the top landing comes out ~9 m long.
+LAV = dict(y=(-25.2, -23.35), rise=3.0, risers=24, onto_bank=1.5, depth=0.60, piers=6,
+           pier_top=2.40, pier_stem=0.60, pier_neck=-1.60, soffit_step=1.5,
+           rail_h=1.00, rail_t=0.05, rail_bar=0.06, post_w=0.06, post_every=1.6, rail_in=0.02)
 
 # mooring poles ("pali", n71): offset from the quay / tower faces, radius, top range
 POLES = dict(off=1.8, r=0.12, top=(1.0, 1.7), bottom=Z_FOUND - 0.10, seed=7,
@@ -217,6 +284,23 @@ def _intervals_minus(a: float, b: float, cuts):
     return out
 
 
+def _rect_minus(r, holes):
+    """Rectangle (E0, E1, Y0, Y1) minus the rectangles `holes`, as disjoint rectangles."""
+    out = [r]
+    for h in holes:
+        nxt = []
+        for a in out:
+            if h[0] >= a[1] or h[1] <= a[0] or h[2] >= a[3] or h[3] <= a[2]:
+                nxt.append(a)
+                continue
+            x0, x1 = max(a[0], h[0]), min(a[1], h[1])
+            nxt += [p for p in ((a[0], x0, a[2], a[3]), (x1, a[1], a[2], a[3]),
+                                (x0, x1, a[2], max(a[2], h[2])), (x0, x1, min(a[3], h[3]), a[3]))
+                    if p[1] - p[0] > 1e-9 and p[3] - p[2] > 1e-9]
+        out = nxt
+    return out
+
+
 def _W(E: float) -> float:
     """West column mirror of an east-column E (spec 4: E' = 72 - E)."""
     return 2.0 * TOWER['mirror_axis'] - E
@@ -243,18 +327,22 @@ def _water(ctx) -> None:
 
 def _plate(ctx) -> None:
     """Land plate (spec 7, task): north of the towers E -0.20 -> 72.20 for
-    Y -27.0 -> -4.7765 (north end of the NE water stair); between the tower
+    Y -30.0 (CALLE_N, the north edge of the calle north of the garden, n2)
+    -> -4.7765 (north end of the NE water stair); between the tower
     columns from the stair tops E 2.45 / 69.55 to Y 35.25 - but notched back to
     the tower inner faces E 4.22 / 67.78 in the 0.91 m gaps, where the water
     stairs (towers part) start flush at -0.45; in E 2.45 -> 4.22 it stays
     2 cm inside the tower spans so it never shows on (or z-fights with) the
-    tower end faces above the water."""
+    tower end faces above the water. Notched for the square's water stair
+    (SQ_STAIR), with the stone coping along the notch. The square's
+    stone grid lines are stone cells of the top (flush inlay)."""
     t = TOWER
     e0, e1 = SITE['land_e']
-    y0, y1 = SITE['land_y']
+    y0, y1 = CALLE_N, SITE['land_y'][1]
     e_st, e_in = t['water_stair']['e_top'], t['e_inner']
     y_n = t['y_first'] - t['gap']                       # -4.7765
-    rects = [(e0, e1, y0, y_n), (e_in, _W(e_in), y_n, y1)]
+    (n_e0, n_e1), n_y = SQ_STAIR['e'], SQ_STAIR['y']
+    rects = [(e0, e1, y0, y_n)] + _rect_minus((e_in, _W(e_in), y_n, y1), [(n_e0, n_e1, n_y, y1)])
     ins = TUCK / M
     for k, (ya, yb) in enumerate(_tower_spans()):
         # strips under the towers end TUCK inside the tower end walls (no coplanar faces)
@@ -266,7 +354,9 @@ def _plate(ctx) -> None:
     bands = [(e0, e0 + b, y0, y_n),                       # rio di S. Biagio quay
              (e0, e_st, y_n - b, y_n),                    # north side of the NE water stair
              (e1 - b, e1, y0, t['y_first'] if NW_LAND else y_n),   # Canale dei Lavraneri quay
-             (e_in, _W(e_in), y1 - b, y1)]                # south rio quay
+             (e_in, _W(e_in), y1 - b, y1),                # south rio quay
+             (n_e0, n_e1, n_y - b, n_y)]                  # along the water stair notch
+    bands += _grid_bands()                                # square: flush stone grid lines
     wr = [_wr(*r) for r in rects]
     wb = [_wr(*r) for r in bands]
     bm = bmesh.new()
@@ -277,10 +367,11 @@ def _plate(ctx) -> None:
 def _banks(ctx) -> None:
     """Far banks as simple land slabs (spec 7, n2 / n32): S. Biagio east bank
     (E < -7), south block across the rio (Y > 40.5), the land north of the
-    plate (n2: continues to the Molino Stucky) and the Sacca Fisola shore (E > 108)."""
+    plate and its calle (n2: built blocks up to the Molino Stucky) and the
+    Sacca Fisola shore (E > 108)."""
     (we0, we1), (wy0, wy1) = SITE['water_e'], SITE['water_y']
     e0, e1 = SITE['land_e']
-    y0 = SITE['land_y'][0]
+    y0 = CALLE_N
     ef, ys, ec = SITE['rio_east_far'], SITE['rio_south_far'], SITE['canal_west_far']
     b = QUAY_BAND / M
     parts = [
@@ -296,14 +387,31 @@ def _banks(ctx) -> None:
     _object(ctx, 'SM_Site_Banks', bm, ['M_Ground', 'M_Stone', 'M_Brick'])
 
 
-def _square_grid(ctx) -> None:
-    """Stone grid of the open square E 39.72 -> 67.78, Y 25.0 -> 35.25 (spec 7,
-    n71). The square's north-east corner E < 41.72, Y < 27.0 belongs to the
-    east-block gardens; lines stop at the quay coping strip."""
+def _entrance_steps_w():
+    """Footprints (E0, E1, Y0, Y1) of the west-column tower entrance steps
+    (towers.ENTRANCE: against the north pavilion, projecting from the middle
+    part's inner face E 4.12, mirrored to E 67.88)."""
+    from .towers import ENTRANCE as en             # the towers part owns the steps
+    t = TOWER
+    e_front = t['e_inner_mid'] + en['steps'] * en['tread'] / M
+    out = []
+    for k in range(t['count']):
+        ym0 = t['y_first'] + t['pitch'] * k + t['pav']
+        out.append((_W(e_front), _W(t['e_inner_mid']), ym0, ym0 + en['step_w'] / M))
+    return out
+
+
+def _grid_bands():
+    """Stone grid lines of the open square E 39.72 -> 67.78, Y 25.0 -> 35.25
+    (spec 7, n71), as drawing rectangles inlaid in the plate top. The square's
+    north-east corner E < 41.72, Y < 27.0 belongs to the east-block gardens;
+    lines stop at the quay coping strip, at the front of the tower entrance
+    steps and at the coping along the water stair's notch."""
     (s_e0, s_e1), (s_y0, s_y1) = SITE['square_e'], SITE['square_y']
     (_, g_e1), (_, g_y1) = SITE['gardens_s']['east']
     w = GRID_W / M / 2
-    y_end = s_y1 - QUAY_BAND / M
+    b = QUAY_BAND / M
+    y_end = s_y1 - b
     rects = []
     E = math.ceil(s_e0 + w - 0.5) + 0.5               # first half-module axis inside the square
     while E < s_e1 - w:
@@ -311,9 +419,31 @@ def _square_grid(ctx) -> None:
         E += 1.0
     for Y in range(math.ceil(s_y0 + w), math.floor(y_end - w) + 1):
         rects.append((s_e0 if Y - w > g_y1 else g_e1, s_e1, Y - w, Y + w))
+    (n_e0, n_e1), n_y = SQ_STAIR['e'], SQ_STAIR['y']
+    holes = _entrance_steps_w() + [(n_e0, n_e1, n_y - b, s_y1)]
+    return [p for r in rects for p in _rect_minus(r, holes)]
+
+
+def _water_stair(ctx) -> None:
+    """Water stair on the square's south quay (n53, SQ_STAIR): fills the plate
+    notch from the foundation up. A stone head one tread deep at the paving
+    level (flush with the paving beside it, like the tower water stairs), then
+    SQ_STAIR['risers'] risers descend east, and a landing at their foot
+    (~ high water) runs to the notch's east end, open to the rio. Istrian
+    stone, like the copings. Its faces against the notch sides are shared with
+    the plate's (opposite facing)."""
+    s = SQ_STAIR
+    (n_e0, n_e1), n_y = s['e'], s['y']
+    x_top, x_end = xE(n_e1), xE(n_e0)                 # x grows eastward: head at the west end
+    tr, n = s['tread'], s['risers']
+    prof = [(x_top, Z_FOUND), (x_top, Z_PAVING)]
+    for i in range(1, n + 1):
+        x = x_top + i * tr
+        prof += [(x, Z_PAVING - (i - 1) * s['riser']), (x, Z_PAVING - i * s['riser'])]
+    prof += [(x_end, Z_PAVING - n * s['riser']), (x_end, Z_FOUND)]
     bm = bmesh.new()
-    _grid_solid(bm, [_wr(*r) for r in rects], GRID_Z)
-    _object(ctx, 'SM_Site_SquareGrid', bm, ['M_Stone'])
+    geo.add_prism_y(bm, prof, yY(SITE['land_y'][1]), yY(n_y))
+    _object(ctx, 'SM_Site_WaterStair', bm, ['M_Stone'])
 
 
 # ------------------------------------------------------------------ gardens
@@ -354,19 +484,22 @@ def _gardens_south(ctx) -> None:
 
 def _step_profile(y_in: float, y_out: float, rise: float):
     """(y, z) outline of a gate threshold (in the wall, flush with the lawn) and
-    STEP_N - 1 steps outside it, descending southward (-y) to the paving."""
+    STEP_N - 1 steps outside it, descending from the wall's inner face y_in
+    past its outer face y_out to the paving (southward for the gates in south
+    walls, northward for those in north walls)."""
+    d = 1.0 if y_out < y_in else -1.0
     pts = [(y_in, Z_BASE), (y_in, Z_COURT), (y_out, Z_COURT)]
     y = y_out
     for k in range(1, STEP_N):
         z = Z_COURT - k * rise
         pts.append((y, z))
-        y -= STEP_TREAD
+        y -= d * STEP_TREAD
         pts.append((y, z))
     pts.append((y, Z_BASE))
     return pts
 
 
-def _garden_north(ctx) -> None:
+def _garden_north(ctx, trunks, crowns) -> None:
     """Walled garden north of the complex E 11 -> 55, Y -26.5 -> -4.7 (spec 7,
     n2, n81): lawn at Z_COURT (spec 3: gardens -0.10) between the inner faces
     of the walls, 2.0 m brick walls with a stone coping, a gate to the north
@@ -393,27 +526,96 @@ def _garden_north(ctx) -> None:
     xa, xb = sorted((xE(gate[0]), xE(gate[1])))
     geo.add_prism_x(bm, _step_profile(yY(y1 - t), yY(y1), (Z_COURT - Z_PAVING) / STEP_N), xa, xb)
     _object(ctx, 'SM_Site_GardenSteps_North', bm, ['M_Stone'])
-    _trees(ctx, (e0, e1, y0, y1))
+    rng = random.Random(TREES['seed'])
+    pts = _scatter(rng, [(e0, e1, y0, y1)], TREES['count'],
+                   lambda E, Y: abs(E - NG_GATE[0]) < 2.0 and Y > y1 - 8.0)
+    _add_trees(trunks, crowns, rng, pts)
 
 
-def _trees(ctx, area) -> None:
-    """~16 low-poly trees (n81, n36, n71): tapered 7-sided trunks and crowns of
-    three jittered icospheres, scattered with a minimum spacing; the path from
-    the gate is kept free."""
+def _gardens_side(ctx, trunks, crowns) -> None:
+    """Garden strips north of the two tower columns (SIDE_GARDENS; n2, n71,
+    n36, n39): lawn at Z_COURT inside 0.30 m brick walls to +1.22 (as the
+    south-row gardens), a gate in the north wall onto the calle with a
+    threshold and steps, and trees. Each strip is cut on the grid of its
+    outline offset by the wall thickness: cells within one wall thickness of
+    the outline are wall, the others lawn (shared faces, no overlaps)."""
+    t, gw, eps = GW_T / M, GATE_W / M, 1e-7
+    rise = (Z_COURT - Z_PAVING) / STEP_N
+    lawn, walls, steps = bmesh.new(), bmesh.new(), bmesh.new()
+    rng = random.Random(TREES['seed'] + 1)
+    for g in SIDE_GARDENS.values():
+        rects = g['rects']
+        y_n = min(r[2] for r in rects if r[0] < g['gate'] < r[1])     # north wall at the gate
+        gate = (g['gate'] - gw / 2, g['gate'] + gw / 2, y_n, y_n + t)
+
+        def inside(E, Y, rects=rects):
+            return any(r[0] - eps <= E <= r[1] + eps and r[2] - eps <= Y <= r[3] + eps for r in rects)
+
+        xs = sorted({v for r in rects for e in r[:2] for v in (e - t, e, e + t)} | set(gate[:2]))
+        ys = sorted({v for r in rects for e in r[2:] for v in (e - t, e, e + t)})
+        wall_c, lawn_c = [], []
+        for i in range(len(xs) - 1):
+            for j in range(len(ys) - 1):
+                cE, cY = (xs[i] + xs[i + 1]) / 2, (ys[j] + ys[j + 1]) / 2
+                if not inside(cE, cY):
+                    continue
+                cell = (xs[i], xs[i + 1], ys[j], ys[j + 1])
+                if all(inside(cE + dx, cY + dy) for dx in (-t, 0.0, t) for dy in (-t, 0.0, t)):
+                    lawn_c.append(cell)
+                elif not _inside(gate, cE, cY):
+                    wall_c.append(cell)
+        _grid_solid(walls, [_wr(*c) for c in wall_c], (Z_BASE, Z_GARDEN_WALL))
+        _grid_solid(lawn, [_wr(*c) for c in lawn_c], (Z_BASE, Z_COURT))
+        xa, xb = sorted((xE(gate[0]), xE(gate[1])))
+        geo.add_prism_x(steps, _step_profile(yY(y_n + t), yY(y_n), rise), xa, xb)
+        pts = _scatter(rng, rects, g['trees'],
+                       lambda E, Y, ge=g['gate'], yn=y_n: abs(E - ge) < 2.0 and Y < yn + 5.0)
+        _add_trees(trunks, crowns, rng, pts)
+    _object(ctx, 'SM_Site_GardenLawn_Side', lawn, ['M_Grass'])
+    _object(ctx, 'SM_Site_GardenWalls_Side', walls, ['M_Brick'])
+    _object(ctx, 'SM_Site_GardenSteps_Side', steps, ['M_Stone'])
+
+
+def _gardens_north(ctx) -> None:
+    """The walled garden, the side strips and their trees (one trunk and one
+    crown object for all of them)."""
+    trunks, crowns = bmesh.new(), bmesh.new()
+    _garden_north(ctx, trunks, crowns)
+    _gardens_side(ctx, trunks, crowns)
+    _object(ctx, 'SM_Site_TreeTrunks', trunks, ['M_Bark'])
+    _object(ctx, 'SM_Site_TreeCrowns', crowns, ['M_Foliage'])
+
+
+def _scatter(rng, rects, count: int, keep_out):
+    """Up to `count` tree positions (E, Y) at least TREES['margin'] inside the
+    union of the drawing rectangles `rects` and TREES['min_dist'] apart,
+    sampled on the union's bounding box; keep_out(E, Y) -> True rejects."""
     T = TREES
-    rng = random.Random(T['seed'])
-    e0, e1, y0, y1 = area
     m = T['margin'] / M
+    bx0, bx1 = min(r[0] for r in rects), max(r[1] for r in rects)
+    by0, by1 = min(r[2] for r in rects), max(r[3] for r in rects)
+
+    def inside(E, Y):
+        return any(r[0] - 1e-7 <= E <= r[1] + 1e-7 and r[2] - 1e-7 <= Y <= r[3] + 1e-7 for r in rects)
+
     pts = []
     for _ in range(5000):
-        if len(pts) >= T['count']:
+        if len(pts) >= count:
             break
-        E, Y = rng.uniform(e0 + m, e1 - m), rng.uniform(y0 + m, y1 - m)
-        if abs(E - NG_GATE[0]) < 2.0 and Y > y1 - 8.0:
+        E, Y = rng.uniform(bx0 + m, bx1 - m), rng.uniform(by0 + m, by1 - m)
+        if keep_out(E, Y):
+            continue
+        if not all(inside(E + dx, Y + dy) for dx in (-m, 0.0, m) for dy in (-m, 0.0, m)):
             continue
         if all(math.hypot(E - a, Y - b) * M >= T['min_dist'] for a, b in pts):
             pts.append((E, Y))
-    trunks, crowns = bmesh.new(), bmesh.new()
+    return pts
+
+
+def _add_trees(trunks, crowns, rng, pts) -> None:
+    """Low-poly trees (n81, n36, n71) at `pts`: tapered 7-sided trunks and
+    crowns of three jittered icospheres, standing on the lawn (Z_COURT)."""
+    T = TREES
     for E, Y in pts:
         x, y = xE(E), yY(Y)
         h = rng.uniform(*T['trunk'])
@@ -437,37 +639,53 @@ def _trees(ctx, area) -> None:
                                              matrix=Matrix.Translation(c) @ Matrix.Diagonal((1.0, 1.0, 0.85, 1.0)))
             for v in res['verts']:
                 v.co = c + (v.co - c) * rng.uniform(0.9, 1.1)
-    _object(ctx, 'SM_Site_TreeTrunks', trunks, ['M_Bark'])
-    _object(ctx, 'SM_Site_TreeCrowns', crowns, ['M_Foliage'])
 
 
 # --------------------------------------------------------------- footbridge
 def _footbridge(ctx) -> None:
     """Arched footbridge over the south rio at E 4.4 -> 5.5 (spec 7, n2, n71,
-    n81, n52): a brick segmental arch springing at about quay level from
-    abutments 3 cm proud of the quays and spanning the whole rio, a stepped deck
-    of Istrian-stone treads (17 risers each way to a landing at the crown)
-    running onto both banks, and solid brick parapets with a stone coping that
-    end in blocks at the feet (n71, n81, n52 show closed parapets).
-
-    Built as x-prisms of one (s, z) section (s: metres south of the crown,
-    y = yc - s): the deck body between the parapets, and the two parapets over
-    the full section from the arch to the coping line, so the bridge's outer
-    sides are single brick faces and no two faces overlap in one plane."""
-    f = FB
+    n81, n52), spanning N-S between the quays Y 35.25 / 40.5."""
     fe0, fe1 = SITE['footbridge_e']
     yq_n, yq_s = SITE['land_y'][1], SITE['rio_south_far']        # quay lines Y 35.25 / 40.5
-    xa, xb = sorted((xE(fe0), xE(fe1)))
+    _arched_bridge(ctx, 'SM_Site_Footbridge', 'SM_Site_FootbridgeParapet', FB, 1,
+                   (yY(yq_n), yY(yq_s)), sorted((xE(fe0), xE(fe1))))
+
+
+def _bridge_sbiagio(ctx) -> None:
+    """Bridge over the rio di S. Biagio at the east end of the calle north of
+    the garden (FB_NE; n2, n36, n81), spanning E-W between the plate's quay
+    E -0.2 and the far bank E -7."""
+    f = FB_NE
+    _arched_bridge(ctx, 'SM_Site_BridgeSBiagio', 'SM_Site_BridgeSBiagioParapet', f, 0,
+                   (xE(SITE['land_e'][0]), xE(SITE['rio_east_far'])), sorted((yY(f['y'][0]), yY(f['y'][1]))))
+
+
+def _arched_bridge(ctx, name: str, parapet_name: str, f, axis: int, quays, lat) -> None:
+    """Humped brick footbridge (n52, n71, n81): a brick segmental arch springing
+    at about quay level from abutments 3 cm proud of the quays and spanning the
+    whole rio, a stepped deck of Istrian-stone treads (f['risers'] risers each
+    way to a landing at the crown) running onto both banks, and solid brick
+    parapets with a stone coping that end in blocks at the feet (n71, n81, n52
+    show closed parapets).
+
+    axis: world axis the bridge spans along (1: y, N-S; 0: x, E-W); quays: the
+    two quay-face coordinates on that axis; lat: (lo, hi) world range across it.
+    Built as prisms of one (s, z) section (s: metres from the crown, world
+    coordinate on the span axis u = uc - s): the deck body between the
+    parapets, and the two parapets over the full section from the arch to the
+    coping line, so the bridge's outer sides are single brick faces and no two
+    faces overlap in one plane."""
+    xa, xb = lat
     pt = f['parapet_t']
-    yc = yY((yq_n + yq_s) / 2)                                   # world y of the crown
-    half = (yq_s - yq_n) * M / 2                                 # 4.33 m, half the rio width
+    uc = (quays[0] + quays[1]) / 2                                # crown, on the span axis
+    half = abs(quays[1] - quays[0]) / 2                           # half the rio width
     n, t = f['risers'], f['tread']
     h = (f['deck'] - Z_PAVING) / n
     L2 = f['landing'] / 2
     S = L2 + (n - 1) * t                                         # half length of the deck
     zb = Z_BASE - 0.10                                            # bottom of the ends, inside the banks
     sa = half - f['abut_proud']                                  # abutment faces
-    zs = Z_WATER - 0.06
+    zs = Z_BRIDGE_FOOT
     # stepped deck: first riser at s = -S, last one at the landing edge s = -L2
     top = [(-S, Z_PAVING + h)]
     for i in range(1, n):
@@ -480,8 +698,13 @@ def _footbridge(ctx) -> None:
     zc = f['crown'] - R
     a0 = math.atan2(f['spring'] - zc, sa)
     segs = 24
-    arch = [(R * math.cos(a0 + (math.pi - 2 * a0) * k / segs),          # s = +sa (south) -> -sa
+    arch = [(R * math.cos(a0 + (math.pi - 2 * a0) * k / segs),          # s = +sa -> -sa
              zc + R * math.sin(a0 + (math.pi - 2 * a0) * k / segs)) for k in range(segs + 1)]
+    for k in range(200):                         # the steps must stay clear of the intrados
+        sv = sa * k / 200
+        zt = Z_PAVING + n * h if sv <= L2 else Z_PAVING + (int((S - sv) / t) + 1) * h
+        if zt - (zc + math.sqrt(R * R - sv * sv)) < 0.10:
+            raise ValueError(f'{name}: deck less than 0.10 m over the arch at s = {sv:.2f} m')
     bottom = [(S, zb), (half + 0.08, zb), (half + 0.08, zs), (sa, zs)] + arch + \
              [(-sa, zs), (-half - 0.08, zs), (-half - 0.08, zb), (-S, zb)]
     # parapet coping line: parallel to the pitch line through the nosings, flat
@@ -491,23 +714,111 @@ def _footbridge(ctx) -> None:
     z_top = Z_PAVING + n * h + H
     coping = [(-S, z_blk), (-S + eb, z_blk), (-L2, z_top), (L2, z_top), (S - eb, z_blk), (S, z_blk)]
 
-    def yz(pts):
-        return [(yc - s, z) for s, z in pts]
+    def prism(bm, pts, lo, hi):
+        pts = [(uc - s, z) for s, z in pts]
+        (geo.add_prism_x if axis == 1 else geo.add_prism_y)(bm, pts, lo, hi)
 
     bm = bmesh.new()
-    geo.add_prism_x(bm, yz(top + bottom), xa + pt, xb - pt)
-    body = _object(ctx, 'SM_Site_Footbridge', bm, ['M_Brick'])
+    prism(bm, top + bottom, xa + pt, xb - pt)
+    body = _object(ctx, name, bm, ['M_Brick'])
     # stone treads, landing and risers (risers face away from the crown; the
     # intrados and the abutment faces face towards it and stay brick)
     geo.assign_material_by_normal(body, [
         (ctx.mats['M_Stone'], lambda c, nn: nn.z > 0.7 or (
-            abs(nn.y) > 0.7 and nn.y * (c.y - yc) > 0 and c.z > Z_PAVING - 0.2)),
+            abs(nn[axis]) > 0.7 and nn[axis] * (c[axis] - uc) > 0 and c.z > Z_PAVING - 0.2)),
     ])
     bm = bmesh.new()
     for x0 in (xa, xb - pt):
-        geo.add_prism_x(bm, yz(coping + bottom), x0, x0 + pt)
-    par = _object(ctx, 'SM_Site_FootbridgeParapet', bm, ['M_Brick'])
+        prism(bm, coping + bottom, x0, x0 + pt)
+    par = _object(ctx, parapet_name, bm, ['M_Brick'])
     geo.assign_material_by_normal(par, [(ctx.mats['M_Stone'], lambda c, nn: nn.z > 0.3)])
+
+
+def _bridge_lavraneri(ctx) -> None:
+    """Ponte dei Lavraneri to Sacca Fisola (LAV; n2, n32, n36) at the west end
+    of the calle north of the garden: spans the canal E 72.2 -> 108 and runs
+    LAV['onto_bank'] onto both banks. One (s, z) section (s: metres west of the
+    crown, x = xc - s) extruded across the deck width: a stepped deck whose
+    nosings lie on a circular arc (uniform risers, treads lengthening towards
+    a long crown landing), a soffit parallel to that arc LAV['depth'] lower,
+    and LAV['piers'] V-shaped piers at equal spacing, narrowing to a stem down
+    to the foundation level - deck and piers one closed solid, so they need no
+    joint. Light steel railings (handrail and posts, one closed comb-shaped
+    section each side) stand on the treads, 2 cm inside the deck edges."""
+    L = LAV
+    xq0, xq1 = xE(SITE['land_e'][1]), xE(SITE['canal_west_far'])   # Giudecca / Sacca Fisola quays
+    xc = (xq0 + xq1) / 2
+    half = abs(xq0 - xq1) / 2
+    s_end = half + L['onto_bank']
+    rise, n = L['rise'], L['risers']
+    h = rise / n
+    R = (s_end ** 2 + rise ** 2) / (2 * rise)
+    zc = Z_PAVING + rise - R
+
+    def arc(s):
+        return zc + math.sqrt(R * R - s * s)
+
+    def arc_inv(z):
+        return math.sqrt(R * R - (z - zc) ** 2)
+
+    # riser i (1..n) where the arc crosses its mid-height: tread i-1 -> i
+    sr = [arc_inv(Z_PAVING + (i - 0.5) * h) for i in range(1, n + 1)]      # decreasing
+    top = [(-sr[0], Z_PAVING + h)]
+    for i in range(1, n):
+        top += [(-sr[i], Z_PAVING + i * h), (-sr[i], Z_PAVING + (i + 1) * h)]
+    top += [(-p[0], p[1]) for p in reversed(top)]                          # east foot -> west foot
+
+    def tread_z(s):
+        k = sum(1 for v in sr if abs(s) <= v)                               # risers passed
+        return Z_PAVING + k * h
+
+    zb = Z_BASE - 0.10                                                      # ends inside the banks
+    pitch = 2 * half / (L['piers'] + 1)
+    piers = [-half + (j + 1) * pitch for j in range(L['piers'])]
+    wt, ws = L['pier_top'] / 2, L['pier_stem'] / 2
+    # soffit from the west quay to the east quay (s decreasing), with the piers
+    ss = [half - k * L['soffit_step'] for k in range(int(2 * half / L['soffit_step']) + 1)] + [-half]
+    ss = sorted({round(v, 6) for v in ss if all(abs(v - p) > wt + 0.05 for p in piers)} |
+                {round(p + d, 6) for p in piers for d in (wt, -wt)}, reverse=True)
+    bottom = [(sr[0], zb), (half, zb)]
+    for s in ss:
+        bottom.append((s, arc(s) - L['depth']))
+        for p in piers:
+            if abs(s - (p + wt)) < 1e-6:                                    # V and stem of a pier
+                bottom += [(p + ws, L['pier_neck']), (p + ws, Z_FOUND),
+                           (p - ws, Z_FOUND), (p - ws, L['pier_neck'])]
+    bottom += [(-half, zb), (-sr[0], zb)]
+    y0, y1 = sorted((yY(L['y'][0]), yY(L['y'][1])))
+    bm = bmesh.new()
+    geo.add_prism_y(bm, [(xc - s, z) for s, z in top + bottom], y0, y1)
+    body = _object(ctx, 'SM_Site_BridgeLavraneri', bm, ['M_Concrete'])
+    geo.assign_material_by_normal(body, [
+        (ctx.mats['M_Stone'], lambda c, nn: nn.z > 0.7 or (
+            abs(nn.x) > 0.7 and abs(nn.z) < 0.05 and nn.x * (c.x - xc) > 0 and c.z > Z_PAVING - 0.2)),
+    ])
+    # railings: posts every ~post_every on the treads (clear of the risers), handrail
+    # rail_h over the nosing arc
+    pw = L['post_w'] / 2
+    s_last = sr[0] - 0.10
+    k_n = max(2, round(2 * s_last / L['post_every']))
+    posts = []
+    for k in range(k_n + 1):
+        p = -s_last + 2 * s_last * k / k_n
+        for v in sr:                                                        # off the risers
+            for r in (v, -v):
+                if abs(p - r) < pw + 0.02:
+                    p = r - (pw + 0.02) * (1 if r > 0 else -1)              # onto the tread nearer the crown
+        posts.append(p)
+    up = [(p + d, arc(p + d) + L['rail_h']) for p in posts for d in (-pw, pw)]
+    prof = list(up)
+    for p in reversed(posts):
+        zr = arc(p + pw) + L['rail_h'] - L['rail_bar'], arc(p - pw) + L['rail_h'] - L['rail_bar']
+        zt = tread_z(p)
+        prof += [(p + pw, zr[0]), (p + pw, zt), (p - pw, zt), (p - pw, zr[1])]
+    bm = bmesh.new()
+    for ya in (y0 + L['rail_in'], y1 - L['rail_in'] - L['rail_t']):
+        geo.add_prism_y(bm, [(xc - s, z) for s, z in prof], ya, ya + L['rail_t'])
+    _object(ctx, 'SM_Site_BridgeLavraneriRailing', bm, ['M_Frame'])
 
 
 # ------------------------------------------------------------ mooring poles
@@ -558,8 +869,10 @@ def build(ctx) -> None:
     _water(ctx)
     _plate(ctx)
     _banks(ctx)
-    _square_grid(ctx)
+    _water_stair(ctx)
     _gardens_south(ctx)
-    _garden_north(ctx)
+    _gardens_north(ctx)
     _footbridge(ctx)
+    _bridge_sbiagio(ctx)
+    _bridge_lavraneri(ctx)
     _poles(ctx)

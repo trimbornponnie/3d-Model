@@ -52,8 +52,10 @@ def reset_scene():
 
 
 def mesh_objects(ctx):
+    """The exportable meshes: everything but the boolean cutters."""
     return [o for o in bpy.data.objects
-            if o.type == 'MESH' and ctx.cutters.name not in [c.name for c in o.users_collection]]
+            if o.type == 'MESH' and not o.name.startswith('CUT_')
+            and ctx.cutters.name not in [c.name for c in o.users_collection]]
 
 
 def export(ctx, out_dir: str, name: str = 'SM_Giudecca_IACP_Valle'):
@@ -65,15 +67,19 @@ def export(ctx, out_dir: str, name: str = 'SM_Giudecca_IACP_Valle'):
     bpy.context.view_layer.objects.active = objs[0]
     paths = {}
     p = os.path.join(out_dir, f'{name}.glb')
+    # the T_*_D images are packed (embedded in the GLB and FBX) and also written
+    # to out_dir by make_materials(texture_dir=out_dir), where the OBJ's MTL finds them
     bpy.ops.export_scene.gltf(filepath=p, export_format='GLB', use_selection=True,
                               export_apply=True, export_yup=True)
     paths['glb'] = p
     p = os.path.join(out_dir, f'{name}.fbx')
     bpy.ops.export_scene.fbx(filepath=p, use_selection=True, apply_scale_options='FBX_SCALE_ALL',
-                             apply_unit_scale=True, use_mesh_modifiers=True, axis_forward='-Z', axis_up='Y')
+                             apply_unit_scale=True, use_mesh_modifiers=True, axis_forward='-Z', axis_up='Y',
+                             path_mode='COPY', embed_textures=True)
     paths['fbx'] = p
     p = os.path.join(out_dir, f'{name}.obj')
-    bpy.ops.wm.obj_export(filepath=p, export_selected_objects=True, export_materials=True)
+    bpy.ops.wm.obj_export(filepath=p, export_selected_objects=True, export_materials=True,
+                          path_mode='STRIP')
     paths['obj'] = p
     return paths
 
@@ -82,7 +88,7 @@ def main():
     args = parse_args()
     t0 = time.time()
     reset_scene()
-    mats = materials.make_materials()
+    mats = materials.make_materials(texture_dir=None if args.no_export else args.out)
     root = geo.collection('COL_Giudecca')
     ctx = Ctx(mats=mats, root=root, cutters=geo.collection('Cutters', hide=True))
     timings = {}
@@ -94,15 +100,23 @@ def main():
         mod.build(ctx)
         timings[part] = round(time.time() - t, 1)
         print(f'[build] {part}: {timings[part]} s')
+    n_cut = geo.rename_cutters(ctx.cutters)          # SM_..._Cut -> CUT_..., kept hidden, never exported
     objs = mesh_objects(ctx)
     for o in objs:
         geo.world_box_uv(o)
-    report = validate.check_scene(objs)
+    prep = validate.prepare_for_export(objs)          # the only step that edits the meshes
+    prep['cutters_renamed'] = n_cut
+    print('[prepare]', json.dumps(prep))
+    report = validate.check_scene(objs, for_export=True, cross=True)     # read-only
+    report['prepared'] = prep
     report['timings_s'] = timings
     report['parts'] = args.only
-    print('[validate]', json.dumps({k: v for k, v in report.items() if k != 'problems'}))
+    print('[validate]', json.dumps({k: v for k, v in report.items() if k not in ('problems', 'warnings')}))
     for p in report['problems'][:40]:
         print('[problem]', p)
+    print(f"[warnings] {len(report['warnings'])} between objects (zfight / contact), listed in build_report.json")
+    for w in report['warnings'][:12]:
+        print('[warning]', w)
     os.makedirs(args.out, exist_ok=True)
     if not args.no_export:
         report['files'] = export(ctx, args.out)

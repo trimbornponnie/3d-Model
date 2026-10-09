@@ -10,13 +10,15 @@ from mathutils import Vector
 # name: (camera location, look-at target, lens mm, ortho_scale or None[, hidden name prefixes])
 VIEWS = {
     # like the 1:200 axonometric n39 / n71: from the south-west, high
-    'axo_sw': ((-95.0, -95.0, 85.0), (2.0, 4.0, 2.0), None, 128.0),
+    'axo_sw': ((-95.0, -95.0, 85.0), (2.0, 4.0, 2.0), None, 136.0),
     # like the white study-model photo n81: from the east, high oblique
     'model_east': ((115.0, -18.0, 62.0), (0.0, 2.0, 0.0), 32.0, None),
     # north façade (n16 / n59 d4), frontal, orthographic
     # site ground, water and garden are hidden so the ortho view reads like the 1:50 elevation
-    'north_elev': ((0.0, 33.0, 6.5), (0.0, 0.0, 6.5), None, 126.0,
-                   ('SM_Site_Plate', 'SM_Site_Water', 'SM_Site_Banks', 'SM_Site_Tree', 'SM_Site_Garden')),
+    # (camera north of the NE tower's water stair, which reaches y 33.46)
+    'north_elev': ((0.0, 40.0, 6.5), (0.0, 0.0, 6.5), None, 126.0,
+                   ('SM_Site_Plate', 'SM_Site_Water', 'SM_Site_Banks', 'SM_Site_Tree', 'SM_Site_Garden',
+                    'SM_Site_Mooring', 'SM_Site_Bridge')),
     # bird's-eye straight down (compare with plans n33/n34/n70)
     'top': ((0.0, 0.0, 150.0), (0.0, 0.0, 0.0), None, 132.0),
     # eye level in the campo looking north to the gallery
@@ -43,8 +45,9 @@ def setup_world(strength: float = 1.0) -> None:
         sun.angle = math.radians(1.5)
         o = bpy.data.objects.new('SUN_Key', sun)
         scene.collection.objects.link(o)
-        # Venice, early afternoon: sun from the south-south-west, ~45° high
-        o.rotation_euler = (math.radians(45), 0.0, math.radians(200))
+        # Venice, early afternoon: sun from the south-south-west (azimuth 200°), 45° high;
+        # a sun lamp shines along its -Z, so Z rotation = 180° - azimuth
+        o.rotation_euler = (math.radians(45), 0.0, math.radians(180 - 200))
 
 
 def render_views(out_dir: str, views=None, res=(1600, 1000), samples: int = 48) -> list[str]:

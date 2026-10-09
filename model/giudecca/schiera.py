@@ -45,10 +45,9 @@ import bmesh
 import bpy
 
 from . import geo
-from .common import (Openings, add_copings, add_pavilion, east_face, north_face,
-                     pavilion_section, south_face, u_on, west_face, xE, yY)
-from .params import (COPING_H, CORE_CROWN, CORE_EAVE, CORE_VAULT_R, DOOR, FLOORS, FRENCH, MODULE,
-                     ROOF_HIGH, SCHIERA, SLAB, WIN_SMALL, WIN_STD, Z_GARDEN_WALL, Z_PAVING)
+from .common import Openings, east_face, north_face, south_face, u_on, west_face, xE, yY
+from .params import (COPING_H, CORE_EAVE, CORE_VAULT_R, DOOR, FLOORS, FRENCH, MODULE, SCHIERA, SLAB,
+                     WIN_SMALL, WIN_STD, Z_GARDEN_WALL, Z_PAVING)
 
 S = SCHIERA
 M = MODULE
@@ -56,25 +55,36 @@ COL = 'Schiera'
 
 # ------------------------------------------------------------ local constants
 Z0 = -0.50                       # building bases: 5 cm into the -0.45 paving (task rule)
-T = FLOORS[1]                    # 3.01, top floor of the bar (roof rule: copings T+2.90 / T+4.10)
+T = FLOORS[1]                    # 3.01, top floor of the bar (copings: BAR_ROOF from params)
 WALL = 0.37                      # spec 6: walls 0.37 thick, axes on their inner faces
 #                                  (params.WALL 0.395 includes the carpet's 2.5 cm render)
 WM = WALL / M
-GAP = 0.04                       # m, expansion-joint gap on E 23.5 (as the carpet, spec 5.2)
+GAP = 0.09                       # m, expansion-joint gap on E 23.5: double walls 9 cm apart as the
+#                                  carpet's (spec 5.2). n13 / n27 / n45 (1:50) draw it as a ~2 px double
+#                                  line (~0.09-0.11 m; 4 cm would be < 1 px) with ~0.53 piers either
+#                                  side: 2.15 arches 1 module off the joint, 1.65 - 1.075 = 0.53 + 0.045
+#                                  (the carpet's n16 "53 | 9 | 53")
+JOINT_STOP = 0.015               # m, façade bands stop short of the wall ends at the joint (n13: the
+#                                  joint's double line runs through the band); > 1 cm: their end faces
+#                                  are clear of the wall ends they run back into
 E_EAST, E_WEST = S['e']          # 7.28, 39.72 outer faces
 Y_N, Y_S = S['y']                # 28.78, 35.22
 Y_BAR = S['bar_y'][1]            # 31.22 south face of the bar
 Y_CORE = S['core_y'][1]          # 32.93 core / terraces | lean-to
+LEAN_Y = S['lean_y']             # (32.93, 35.22) lean-to: high (north) wall, low (south) wall
 HALF = S['block_half']           # 2.224 modules
 JOINT_E = S['joint']             # 23.5
+# coping tops (low wall, high wall) of the two mono-pitch roofs, from params (spec 3 table, spec 6)
+BAR_ROOF = (S['bar_low'], S['bar_high'])      # 5.91 north wall / 7.10 south wall
+LEAN_ROOF = (S['lean_low'], S['lean_high'])   # 2.90 south wall / 4.10 north wall
 CORE_HW = S['panel']['w'] / 2    # 2.085 m: core outer faces = panel width 4.17 (SE 60 plan:
-#                                  0.335 + 0.10 + 1.55 + 0.20 + 1.55 + 0.10 + 0.335)
+#                                  0.335 + 0.10 + 1.55 + 0.20 + 1.55 + 0.10 + 0.335; n45 measures 4.18)
 # core roof (spec 3 roof rule, SE 59 eave detail, n5 section F measured at X36 / X28):
 # brick core walls to the eave T+2.48 = 5.49 (= top of the bar's 5.36 -> 5.49 band) under a
 # copper flashing ("scossalina in rame"); copper vault R CORE_VAULT_R = 6.00 spanning E-W
 # with its crown at T+2.70 = 5.71, dropping into the internal gutter inside the wall tops
 EAVE = T + CORE_EAVE             # 5.49
-VAULT_CROWN = T + CORE_CROWN     # 5.71 (n5 F: outer crown 5.67-5.71; spec 6 "~5.6")
+VAULT_CROWN = S['vault_crown']   # 5.71 = T + CORE_CROWN (n5 F: outer crown 5.67-5.71)
 CORE_TOP = EAVE - 0.01           # brick core top, 1 cm inside the flashing
 FLASH = (0.025, 0.02, 1.55)      # flashing: thickness, outer overhang, inner edge (m from the
 #                                  axis, under the vault, which meets the 5.495 top at +-1.59)
@@ -113,12 +123,18 @@ PANEL_Y = (0.24, 0.10)           # m NORTH of Y 32.93: north / south face of the
 #                                  closes the core's south end in front of the lean-to's high
 #                                  coping (n5 section A: Y 32.78 -> 32.89; SE 60 B-B "8 | 14 | 23":
 #                                  23 cm of beam and copertina south of the panel to axis Y 33)
-Z_BEAM = ROOF_HIGH - COPING_H    # 3.98: top of the beam / lean-to wall under the copertina
+Z_BEAM = LEAN_ROOF[1] - COPING_H # 3.98: top of the beam / lean-to wall under the copertina
 PIPE_R = 0.05                    # downpipes Ø 0.10 (n13 / n6 double lines)
 DOWNPIPE_DX = 0.36               # m, lean-to downpipes inside the block corners (n6)
 PIPE_OFF = 0.035                 # m, downpipes stand off the wall face (clips, hoppers into the wall)
-SHOE_Z = -0.40                   # lean-to downpipes turn back into the wall just above the
-#                                  -0.45 quay: the south face Y 35.22 is 5 cm from the rio (spec 6/7)
+SHOE_Z = S['ground']             # -0.40 ground outside (spec 6): the lean-to downpipes turn back into
+#                                  the wall just above the -0.45 quay (the face is 5 cm from the rio)
+GARDEN_IN = 0.015                # m, garden ground runs 1.5 cm into the walls round it (no open joint),
+#                                  clear of the faces there: wall faces (0) and the 3 cm masonry overlaps
+GARDEN_BASE = Z0 + 0.03          # its base 3 cm over the wall bases (no coplanar / near-coplanar
+#                                  bottoms where it overlaps them), still 2 cm into the -0.45 paving
+STRAIGHT = 1e-4                  # m, a face corner whose vertex lies this close to the line through
+#                                  its two neighbours counts as straight (see _split_straight_corners)
 LINTEL_JOINT = 0.01              # m, joint between the paired north lintel blocks (n13)
 FLUE = dict(r=0.09, dx=0.13, dy=0.13, z0=5.40, top=7.85)   # twin flue pipes (spec 9, n5, n39)
 
@@ -272,10 +288,37 @@ def _panel_y() -> tuple[float, float]:
     return yY(Y_CORE) + PANEL_Y[0], yY(Y_CORE) + PANEL_Y[1]
 
 
-def _verge(bm, E_face, inward, Y_low, Y_high, Tz):
+def _section(Y_low, Y_high, roof):
+    """(y, z) section of a mono-pitch pavilion from its low to its high wall:
+    common.pavilion_section (walls COPING_H under the coping tops, tiled plane
+    0.10 under the wall tops), but with the coping tops `roof` = (low, high)
+    taken from params.SCHIERA instead of T + ROOF_LOW / T + ROOF_HIGH (the bar
+    is 5.91 / 7.10, spec 3 table; the rule would give 7.11)."""
+    yl, yh = yY(Y_low), yY(Y_high)
+    s = 1.0 if yh > yl else -1.0
+    L, H = roof[0] - COPING_H, roof[1] - COPING_H
+    return [(yl, Z0), (yh, Z0), (yh, H), (yh - s * WALL, H), (yh - s * WALL, H - 0.10),
+            (yl + s * WALL, L - 0.10), (yl + s * WALL, L), (yl, L)]
+
+
+def _pavilion(bm, E0, E1, Y_low, Y_high, roof):
+    geo.add_prism_x(bm, _section(Y_low, Y_high, roof), xE(E1), xE(E0))
+
+
+def _copings(bm, E0, E1, Y_low, Y_high, roof):
+    """Concrete copings on the low and high walls (as common.add_copings): wall
+    width plus 2 cm outside, COPING_H high, tops at `roof` = (low, high)."""
+    yl, yh = yY(Y_low), yY(Y_high)
+    s = 1.0 if yh > yl else -1.0
+    x0, x1 = xE(E1) - 0.02, xE(E0) + 0.02
+    _box(bm, x0, x1, yh + 0.02 * s, yh - s * WALL, roof[1] - COPING_H, roof[1])
+    _box(bm, x0, x1, yl - 0.02 * s, yl + s * WALL, roof[0] - COPING_H, roof[0])
+
+
+def _verge(bm, E_face, inward, Y_low, Y_high, roof):
     """Sloping concrete coping on an exposed pavilion end wall along the roof
     line, running 5 cm into the wall copings (as the towers' verges)."""
-    sec = pavilion_section(Y_low, Y_high, Z0, Tz, WALL)
+    sec = _section(Y_low, Y_high, roof)
     (yl, zl), (yh, zh) = sec[5], sec[4]
     s = 1.0 if yY(Y_high) > yY(Y_low) else -1.0
     m = (zh - zl) / (yh - yl)
@@ -287,17 +330,17 @@ def _verge(bm, E_face, inward, Y_low, Y_high, Tz):
     geo.add_prism_x(bm, prof, min(xa, xb), max(xa, xb))
 
 
-def _tiles(bm, E0, E1, Y_low, Y_high, Tz):
+def _tiles(bm, E0, E1, Y_low, Y_high, roof):
     """Clay-tile layer 5 cm thick on the roof plane between the long walls."""
-    sec = pavilion_section(Y_low, Y_high, Z0, Tz, WALL)
+    sec = _section(Y_low, Y_high, roof)
     (yl, zl), (yh, zh) = sec[5], sec[4]
     geo.add_prism_x(bm, [(yl, zl), (yh, zh), (yh, zh + 0.05), (yl, zl + 0.05)],
                     min(xE(E0), xE(E1)), max(xE(E0), xE(E1)))
 
 
-def _box_gutter(bm, E0, E1, Y_low, Y_high, Tz):
+def _box_gutter(bm, E0, E1, Y_low, Y_high, roof):
     """Copper box gutter at the low wall (roof rule: low coping with copper box gutter)."""
-    sec = pavilion_section(Y_low, Y_high, Z0, Tz, WALL)
+    sec = _section(Y_low, Y_high, roof)
     yl, zl = sec[5]
     s = 1.0 if yY(Y_high) > yY(Y_low) else -1.0
     x0, x1 = sorted((xE(E0), xE(E1)))
@@ -328,7 +371,7 @@ def _core_profile(y_bar: float, y_end: float):
 def _body(ctx, tag, E0, E1, axes):
     name = f'SM_Schiera_Body_{tag}'
     target = ctx.solid(name, COL, 'M_Brick',
-                       lambda bm: add_pavilion(bm, E0, E1, S['bar_y'][0], Y_BAR, Z0, T, WALL))
+                       lambda bm: _pavilion(bm, E0, E1, S['bar_y'][0], Y_BAR, BAR_ROOF))
     pieces = []
     y_up = (yY(Y_BAR) + 0.03, yY(Y_CORE) - 0.075)     # 3 cm into the bar, 7.5 cm into the lean-to wall
     for i, a in enumerate(axes):
@@ -338,10 +381,37 @@ def _body(ctx, tag, E0, E1, axes):
                                 lambda bm, a=a: geo.add_prism_x(bm, _core_profile(*y_up),
                                                                 xE(a) - CORE_HW, xE(a) + CORE_HW)))
         pieces.append(ctx.solid(f'SM_Schiera_Tmp_{tag}{i}b', COL, 'M_Brick',
-                                lambda bm, a=a: add_pavilion(bm, a - HALF, a + HALF, Y_S, Y_CORE, Z0, 0.0, WALL)))
+                                lambda bm, a=a: _pavilion(bm, a - HALF, a + HALF, LEAN_Y[1], LEAN_Y[0], LEAN_ROOF)))
     geo.boolean_union(target, pieces)
     target.name = target.data.name = name
     return target
+
+
+def _split_straight_corners(obj) -> int:
+    """Triangulate (BEAUTY) every quad / n-gon of a boolean result that has a
+    straight corner - a vertex on the line through its two neighbours, i.e. a
+    T-vertex the exact solver leaves on a long edge, such as the terrace
+    parapet's outer top corner on the bar's south face. Exporters split a quad
+    on its first diagonal (v0-v2), which there gives a zero-area / sliver
+    triangle; BEAUTY splits on the other diagonal. Returns the faces split."""
+    bm = bmesh.new()
+    bm.from_mesh(obj.data)
+    bad = []
+    for f in bm.faces:
+        if len(f.verts) < 4:
+            continue
+        for lp in f.loops:
+            a, b, c = lp.link_loop_prev.vert.co, lp.vert.co, lp.link_loop_next.vert.co
+            ac = c - a
+            if ac.length < STRAIGHT or (b - a).cross(ac).length / ac.length < STRAIGHT:
+                bad.append(f)
+                break
+    if bad:
+        bmesh.ops.triangulate(bm, faces=bad, quad_method='BEAUTY', ngon_method='BEAUTY')
+        bm.to_mesh(obj.data)
+        obj.data.update()
+    bm.free()
+    return len(bad)
 
 
 class Cuts(Openings):
@@ -361,6 +431,7 @@ class Cuts(Openings):
             mod.object = cutter
             geo.apply_modifiers(t)
             geo.cleanup(t)
+            _split_straight_corners(t)
         else:
             self.cut.free()
         if len(self.panes.faces):
@@ -488,32 +559,36 @@ def _trim(ctx, bags):
         # bar copings 7.10 / 5.91, flush with the wall ends at the joint
         e0 = E0 + (m2E(0.02) if _near(E0, JOINT_E + m2E(GAP / 2)) else 0.0)
         e1 = E1 - (m2E(0.02) if _near(E1, JOINT_E - m2E(GAP / 2)) else 0.0)
-        add_copings(bm, e0, e1, S['bar_y'][0], Y_BAR, T, WALL)
+        _copings(bm, e0, e1, S['bar_y'][0], Y_BAR, BAR_ROOF)
         # precast lintel blocks over the portico arches (n13, n6), full wall depth
         for f, u0, u1, arches, uj in _lintels(E0, E1):
             outline = _lintel_outline(u0, u1, arches, S['arch_spring'], S['arch_block_top'])
             f.solid(bm, outline, WALL, outside=0.03)
     # sloping verges on the exposed bar ends
-    _verge(bm, E_EAST, -1, S['bar_y'][0], Y_BAR, T)
-    _verge(bm, E_WEST, +1, S['bar_y'][0], Y_BAR, T)
-    # lintel band 5.36 -> 5.49 round the bar (north, south, both ends); on the south face
-    # it stops 1 cm inside each core's side walls, which rise to the same eave (5.49)
-    _on_face(bm, fn, xw - BAND_PROUD, xe + BAND_PROUD, *BAND, BAND_PROUD, BAND_BACK)
-    stops = [xw - BAND_PROUD]
-    for a in sorted(S['axes'], reverse=True):            # west -> east = ascending x
-        stops += [xE(a) - CORE_HW + 0.01, xE(a) + CORE_HW - 0.01]
-    stops.append(xe + BAND_PROUD)
-    for i in range(0, len(stops), 2):
-        _on_face(bm, fs, stops[i], stops[i + 1], *BAND, BAND_PROUD, BAND_BACK)
+    _verge(bm, E_EAST, -1, S['bar_y'][0], Y_BAR, BAR_ROOF)
+    _verge(bm, E_WEST, +1, S['bar_y'][0], Y_BAR, BAR_ROOF)
+    # lintel band 5.36 -> 5.49 round the bar (north, south, both ends), cut at the expansion
+    # joint JOINT_STOP short of the wall ends (n13); on the south face it also stops 1 cm
+    # inside each core's side walls, which rise to the same eave (5.49)
+    g = m2E(GAP / 2)
+    joint = [xE(JOINT_E + g) - JOINT_STOP, xE(JOINT_E - g) + JOINT_STOP]
+    cores = [xE(a) + s * (CORE_HW - 0.01) for a in S['axes'] for s in (-1, 1)]
+    for face, extra in ((fn, []), (fs, cores)):
+        stops = sorted([xw - BAND_PROUD, xe + BAND_PROUD] + joint + extra)    # west -> east
+        for i in range(0, len(stops), 2):
+            _on_face(bm, face, stops[i], stops[i + 1], *BAND, BAND_PROUD, BAND_BACK)
+    # end-face bands 1 mm inside the long bands' top and bottom planes, so the corner
+    # overlaps have no coplanar faces (they rendered as dark specks)
     yn, ys = yY(Y_N) + 0.028, yY(Y_BAR) - 0.028
-    _on_face(bm, east_face(E_EAST), ys, yn, *BAND, BAND_PROUD - 0.002, BAND_BACK)
-    _on_face(bm, west_face(E_WEST), ys, yn, *BAND, BAND_PROUD - 0.002, BAND_BACK)
+    band_end = (BAND[0] + 0.001, BAND[1] - 0.001)
+    _on_face(bm, east_face(E_EAST), ys, yn, *band_end, BAND_PROUD - 0.002, BAND_BACK)
+    _on_face(bm, west_face(E_WEST), ys, yn, *band_end, BAND_PROUD - 0.002, BAND_BACK)
     for a in S['axes']:
         xa0, xa1 = xE(a + HALF), xE(a - HALF)
         # lean-to copings 4.10 / 2.90 and verges on both block sides
-        add_copings(bm, a - HALF, a + HALF, Y_S, Y_CORE, 0.0, WALL)
-        _verge(bm, a - HALF, -1, Y_S, Y_CORE, 0.0)
-        _verge(bm, a + HALF, +1, Y_S, Y_CORE, 0.0)
+        _copings(bm, a - HALF, a + HALF, LEAN_Y[1], LEAN_Y[0], LEAN_ROOF)
+        _verge(bm, a - HALF, -1, LEAN_Y[1], LEAN_Y[0], LEAN_ROOF)
+        _verge(bm, a + HALF, +1, LEAN_Y[1], LEAN_Y[0], LEAN_ROOF)
         # copertina under and in front of the oculus panel (SE 60 B-B), 3.98 -> 4.09 (the
         # panel's base), from the core's south face to the lean-to's high coping, 2 cm
         # past the core's side walls
@@ -528,7 +603,8 @@ def _trim(ctx, bags):
         # L0 band 2.35 -> 2.48 on the lean-to south face and the garden-side walls
         _on_face(bm, fl, xa0 - BAND_PROUD, xa1 + BAND_PROUD, *BAND_L0, BAND_PROUD, BAND_BACK)
         for f in (east_face(a - HALF), west_face(a + HALF)):
-            _on_face(bm, f, yY(Y_S) + 0.028, yY(Y_BAR) + 0.005, *BAND_L0, BAND_PROUD - 0.002, BAND_BACK)
+            _on_face(bm, f, yY(Y_S) + 0.028, yY(Y_BAR) + 0.005, BAND_L0[0] + 0.001, BAND_L0[1] - 0.001,
+                     BAND_PROUD - 0.002, BAND_BACK)
     # window sills: 4 cm proud, 8 cm past the reveals
     for f, u, w, z in bags['sills']:
         _on_face(bm, f, u - w / 2 - 0.08, u + w / 2 + 0.08, z - 0.06, z + 0.01, 0.04, 0.115)
@@ -581,9 +657,9 @@ def _panels(ctx):
 def _roofs(ctx):
     bm = bmesh.new()
     for tag, E0, E1, axes in segments():
-        _tiles(bm, E0, E1, S['bar_y'][0], Y_BAR, T)
+        _tiles(bm, E0, E1, S['bar_y'][0], Y_BAR, BAR_ROOF)
     for a in S['axes']:
-        _tiles(bm, a - HALF, a + HALF, Y_S, Y_CORE, 0.0)
+        _tiles(bm, a - HALF, a + HALF, LEAN_Y[1], LEAN_Y[0], LEAN_ROOF)
     return geo.object_from_bmesh(bm, 'SM_Schiera_Roof', ctx.col(COL), ctx.mats['M_RoofTile'])
 
 
@@ -628,9 +704,9 @@ def _copper(ctx):
             _box(bm, xp - 0.04, xp + 0.04, yp - 0.04, yw + 0.03, SHOE_Z, SHOE_Z + 0.10)
             for zc in (0.80, 1.80):
                 _box(bm, xp - 0.015, xp + 0.015, yp, yw + 0.01, zc, zc + 0.04)
-        _box_gutter(bm, a - HALF, a + HALF, Y_S, Y_CORE, 0.0)
+        _box_gutter(bm, a - HALF, a + HALF, LEAN_Y[1], LEAN_Y[0], LEAN_ROOF)
     for tag, E0, E1, axes in segments():
-        _box_gutter(bm, E0, E1, S['bar_y'][0], Y_BAR, T)
+        _box_gutter(bm, E0, E1, S['bar_y'][0], Y_BAR, BAR_ROOF)
     return geo.object_from_bmesh(bm, 'SM_Schiera_Copper', ctx.col(COL), ctx.mats['M_Copper'])
 
 
@@ -700,10 +776,12 @@ def _garden_copings(ctx):
 
 
 def _gardens(ctx):
-    """Garden ground (lawn) just under 0.00 (spec 6: gardens ~0.00)."""
+    """Garden ground (lawn) just under 0.00 (spec 6: gardens ~0.00), running
+    GARDEN_IN into the bar, block, dividing, end and south walls round it."""
     bm = bmesh.new()
     for lo, hi in _garden_ranges():
-        _box(bm, xE(hi) + 0.002, xE(lo) - 0.002, yY(GW_Y) + 0.002, yY(Y_BAR) - 0.002, Z0, -0.02)
+        _box(bm, xE(hi) - GARDEN_IN, xE(lo) + GARDEN_IN, yY(GW_Y) - GARDEN_IN, yY(Y_BAR) + GARDEN_IN,
+             GARDEN_BASE, -0.02)
     return geo.object_from_bmesh(bm, 'SM_Schiera_Gardens', ctx.col(COL), ctx.mats['M_Grass'])
 
 

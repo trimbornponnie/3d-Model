@@ -12,7 +12,7 @@ import bmesh
 import bpy
 
 from . import geo
-from .params import MODULE, COPING_W, COPING_H, ROOF_HIGH, ROOF_LOW
+from .params import MODULE, COPING_H, ROOF_HIGH, ROOF_LOW
 
 E0_WORLD, Y0_WORLD = 36.0, 15.5
 
