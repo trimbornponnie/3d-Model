@@ -57,7 +57,7 @@ TYPES: dict[str, dict] = {
     # single-leaf windows of the same family: two-light lights 0.91-0.995, tower pairs 0.93 / 0.92
     'E1': dict(leaves=1),
     # finestre schiera e torri 0.91 x 0.92, sill z_f+1.43: plain jamb, frame in the lining plane (SE 53 F)
-    'F': dict(jamb='plain', leaves=1, lintel=True),
+    'F': dict(jamb='plain', leaves=1, lintel=True, board=False),
     # porte-finestre 1.04 / 1.14 (C), 0.775-0.91 (D): full-height leaves, RC threshold 0.45 deep (SE 53 C/D)
     'C': dict(door=True, bottom_rail=0.150, board=False),
     'D': dict(door=True, leaves=1, bottom_rail=0.150, board=False),
@@ -65,7 +65,7 @@ TYPES: dict[str, dict] = {
     'T': dict(jamb='plain', door=False, lintel=False, niche=False),
     # stair window 60 x 60: metal frame flush with the outer face, one sash (n3)
     'K': dict(jamb='plain', leaves=1, frame=(0.040, 0.050), sash=(0.035, 0.040), bottom_rail=0.035,
-              glass=0.006, board=False, lintel=False, handle=False,
+              glass=0.014, board=False, lintel=False, handle=False,          # sealed unit ~4/6/4 (n3)
               frame_mat='M_Steel', leaf_mat='M_Steel', frame_at=0.0),
     # dwelling entrance door ("portoncino", SE 65): 4 raised panels, frame behind the jamb
     'P': dict(jamb='plain', door=True, leaves=1, panel_leaf=True, board=False, lintel=True,
@@ -347,23 +347,26 @@ def _glass(bm, fr: Frame3, outline_uz, d_mid: float, t: float) -> None:
 def _door_leaf(kit, fr, s, u0, u1, z0, z1, ds, zf, prefix):
     """Entrance leaf with 4 raised panels (SE 65) or a flush cellar leaf."""
     lb = kit(f'{prefix}DoorLeaves', s['leaf_mat'])
-    t = 0.054 if s.get('panel_leaf') else 0.044
+    t = 0.050 if s.get('panel_leaf') else 0.044       # "5": two 18 mm skins + insulated core (SE 65)
     if s.get('flush_leaf'):
         _box(lb, fr, u0 + 0.003, u1 - 0.003, z0 + 0.008, z1 - 0.003, ds, ds + t)
         return
-    st = 0.11                        # stiles and rails
-    zm = z0 + (z1 - z0) / 3          # lower panels 1/3, upper 2/3
+    # 4 raised panels (SE 65 measured): lower 0.16-0.90, mid rail 0.90-0.99, upper 0.99-1.92
+    st = 0.11                        # stiles
     um = (u0 + u1) / 2
+    zl0, zl1, zu0 = zf + 0.16, zf + 0.90, zf + 0.99
+    zu1 = min(zf + 1.92, z1 - 0.06)
     frame_o = _rect(u0 + 0.003, u1 - 0.003, z0 + 0.008, z1 - 0.003)
-    _ring(lb, fr, frame_o, st, ds, ds + t, bottom=0.16)
-    _box(lb, fr, um - st / 2, um + st / 2, z0 + 0.168, z1 - 0.003 - st, ds, ds + t)       # muntin
-    _box(lb, fr, u0 + st, u1 - st, zm - st / 2, zm + st / 2, ds, ds + t)                    # lock rail
+    _ring(lb, fr, frame_o, st, ds, ds + t, bottom=zl0 - z0 - 0.008)
+    _box(lb, fr, um - st / 2, um + st / 2, zl0, zu1, ds + 0.001, ds + t - 0.001)          # muntin
+    _box(lb, fr, u0 + st, u1 - st, zl1, zu0, ds + 0.001, ds + t - 0.001)                    # lock rail
+    _box(lb, fr, u0 + st, u1 - st, zu1, z1 - 0.003 - st, ds + 0.001, ds + t - 0.001)        # top rail
     pb = kit(f'{prefix}DoorPanels', s['leaf_mat'])
     for a, b in ((u0 + st, um - st / 2), (um + st / 2, u1 - st)):
-        for c, d in ((z0 + 0.168, zm - st / 2), (zm + st / 2, z1 - 0.003 - st)):
-            _box(pb, fr, a, b, c, d, ds + 0.012, ds + t - 0.012)                            # raised panel
+        for c, d in ((zl0, zl1), (zu0, zu1)):
+            _box(pb, fr, a, b, c, d, ds + 0.010, ds + t - 0.010)                            # raised panel
     hb = kit(f'{prefix}Handles', 'M_Steel')
-    _box(hb, fr, um - 0.03, um + 0.03, zf + 1.00 - 0.03, zf + 1.00 + 0.03, ds - 0.03, ds)    # knob, hall side
+    _box(hb, fr, um - 0.03, um + 0.03, zf + 0.94 - 0.03, zf + 0.94 + 0.03, ds - 0.03, ds)    # central knob at ~0.94
 
 
 def _street_door(kit, fr, s, u0, u1, z0, z1, ds, zf, prefix):
