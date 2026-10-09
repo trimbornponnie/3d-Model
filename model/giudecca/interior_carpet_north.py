@@ -133,6 +133,7 @@ CELLAR = dict(w=0.775, z0=-0.32, z1=1.73, sill=0.11)                      # port
 # flights (n31 "14 x 23,5 = 3,29", n18 15 risers per storey)
 N_RISERS = 15
 FL_WAIST, FL_TREAD, FL_NOSE, FL_RISER = 0.16, 0.03, 0.02, 0.015   # waist, oak tread / nosing / riser (S1)
+TREAD_MAT = 'M_DoorLeaf'             # oak treads and risers, matching the parquet (layers.md S1; as towers / schiera)
 GOING = (YS0 - Y_FOOT) * M / (N_RISERS - 1)
 
 # stacks
@@ -1435,7 +1436,7 @@ class House:
             # 14 steps + the upper floor's edge as the 15th riser (flight() without
             # tread_top_last leaves a zero-width fin on the top riser)
             I.flight(kit, start, (0, -1), width, N_RISERS - 1, rise, GOING, zf, waist=FL_WAIST, side=-s,
-                     tread_top_last=True, tread_t=FL_TREAD, nosing=FL_NOSE)
+                     tread_top_last=True, tread_t=FL_TREAD, nosing=FL_NOSE, tread_mat=TREAD_MAT)
             self.flight_finishes(s, zf, rise)
             # raked balustrade on the open edge, handrail on the spine
             for d, posts in ((D_BAND - 0.025, True), (D_AX + 0.055, False)):
@@ -1517,7 +1518,7 @@ class House:
             z_ceil = z_up - SLAB - 0.01                  # the pass's ceiling plaster underside
             I.prism(pl, h.rect(s, da, dc, YS0, YS0 + PL / M), zt + slope * s_top - w_v - pv, z_ceil)
         # oak risers: 15 under each tread, the top one on the last tread up to the upper floor
-        rb = kit('StairRisers', 'M_StairTread')
+        rb = kit('StairRisers', TREAD_MAT)
         for k in range(n):
             I.prism(rb, I.rect(h.X(s, da), h.X(s, db), y(k * g - FL_RISER), y(k * g)),
                     zf + k * rise, zf + (k + 1) * rise - FL_TREAD)

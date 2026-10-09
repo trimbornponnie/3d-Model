@@ -25,6 +25,36 @@ VIEWS = {
     'campo': ((-1.5, 6.0, 1.7), (-1.5, 30.0, 6.0), 18.0, None),
 }
 
+# Interior and cutaway views of the --interiors build (docs/INTERIORS.md). Options: a point
+# lamp (W) at the camera for rooms lit only through their windows; 'cut': the orthographic
+# camera sits in the cutting plane itself (geometry in front of it is behind the camera) and
+# nothing casts shadows, so the storey or section reads like a plan / section drawing.
+INTERIOR_VIEWS = {
+    # tower E0, L3 living room of the duplex looking to the hall and the stair
+    'int_tower_living': ((57.09, 31.20, 10.2), (53.955, 28.70, 10.4), 16.0, None, (), {'lamp': 150}),
+    # tower E0, L2 hall of the duplex with the private flight
+    'int_tower_stair': ((54.12, 29.60, 7.6), (53.46, 24.90, 7.2), 16.0, None, (), {'lamp': 150}),
+    # north row house 20.5, L3 living room under the tiled roof
+    'int_north_living': ((21.6, 25.2, 10.6), (25.0, 21.4, 10.9), 16.0, None, (), {'lamp': 150}),
+    # north row house 20.5, the stair from the L1 landing
+    'int_north_stair': ((25.2, 21.75, 4.4), (25.2, 17.8, 5.9), 14.0, None, (), {'lamp': 150}),
+    # middle row house 20.5, L2 hall under the copper vault with the terrace door
+    'int_middle_hall': ((24.275, 5.115, 8.0), (24.375, 10.395, 7.0), 14.0, None, (), {'lamp': 150}),
+    # south row house 20.5, L0 lobby and stair
+    'int_south_lobby': ((24.275, -5.775, 1.6), (24.575, -1.65, 1.0), 14.0, None, (), {'lamp': 150}),
+    # schiera block 35.5, L0 living room with the flight
+    'int_schiera_living': ((2.6, -23.3, 1.5), (0.6, -26.6, 1.9), 16.0, None, (), {'lamp': 150}),
+    # cutaway plans of the three carpet rows at house 20.5 (cut 1.5 m above the floor)
+    'cut_carpet_L1': ((25.575, 3.0, 4.51), (25.575, 3.0, 0.0), None, 56.0, ('SM_Site_Tree',), {'cut': True}),
+    'cut_carpet_L3': ((25.575, 3.0, 10.52), (25.575, 3.0, 0.0), None, 56.0, ('SM_Site_Tree',), {'cut': True}),
+    # cutaway plan of tower E0 at L2
+    'cut_tower_L2': ((56.5, 26.4, 7.52), (56.5, 26.4, 0.0), None, 16.0, (), {'cut': True}),
+    # north-south section through the rooms of the west dwellings of house 20.5 (1.5 m west of
+    # the house axis), seen from the east
+    'cut_section_house': ((24.075, 2.0, 5.0), (0.0, 2.0, 5.0), None, 34.0, ('SM_Site_Tree',), {'cut': True}),
+}
+VIEWS.update(INTERIOR_VIEWS)
+
 
 def _look_at(cam: bpy.types.Object, target: Vector) -> None:
     d = target - cam.location
@@ -65,6 +95,7 @@ def render_views(out_dir: str, views=None, res=(1600, 1000), samples: int = 48) 
     for name in (views or VIEWS):
         loc, tgt, lens, ortho = VIEWS[name][:4]
         hide = VIEWS[name][4] if len(VIEWS[name]) > 4 else ()
+        opts = VIEWS[name][5] if len(VIEWS[name]) > 5 else {}
         hidden = [o for o in bpy.data.objects if any(o.name.startswith(h) for h in hide)]
         for o in hidden:
             o.hide_render = True
@@ -81,11 +112,26 @@ def render_views(out_dir: str, views=None, res=(1600, 1000), samples: int = 48) 
             cd.type = 'PERSP'
             cd.lens = lens
         cd.clip_end = 2000
+        cd.clip_start = 0.001 if opts.get('cut') else 0.1
         scene.camera = cam
+        meshes = [o for o in bpy.data.objects if o.type == 'MESH']
+        if opts.get('cut'):
+            for o in meshes:
+                o.visible_shadow = False
+        lamp = bpy.data.objects.get('LAMP_Interior')
+        if lamp is None:
+            lamp = bpy.data.objects.new('LAMP_Interior', bpy.data.lights.new('LAMP_Interior', 'POINT'))
+            lamp.data.shadow_soft_size = 0.3
+            scene.collection.objects.link(lamp)
+        lamp.data.energy = float(opts.get('lamp', 0.0))
+        lamp.location = Vector(loc) + Vector((0.0, 0.0, 0.3))
+        lamp.hide_render = not opts.get('lamp')
         path = f'{out_dir}/{name}.png'
         scene.render.filepath = path
         bpy.ops.render.render(write_still=True)
         for o in hidden:
             o.hide_render = False
+        for o in meshes:
+            o.visible_shadow = True
         paths.append(path)
     return paths

@@ -171,6 +171,7 @@ PASS_STEPS = dict(d=1.80, y=(13.40, 13.58, 13.76))   # landing + 3 steps in the 
 
 # flights (15 risers per storey, 14 goings: n10 / n67 / n11, n18)
 N_RISERS = 15
+TREAD_MAT = 'M_DoorLeaf'             # oak stair treads, matching the parquet (layers.md S1; as towers / schiera)
 GOING_M = 2.0 * M / 14              # 0.2357
 GOING_S = 0.235
 Y_FOOTM = Y_TOPM + 14 * GOING_M / M     # 12.145
@@ -1387,7 +1388,7 @@ class HouseM(HouseBase):
         for zf, ztop in ((Z0, Z1), (Z1, Z2)):
             rise = (ztop - zf) / N_RISERS
             I.flight(self.kit, start, (0, 1), width, N_RISERS - 1, rise, GOING_M, zf, waist=0.16, side=s,
-                     tread_top_last=True)
+                     tread_top_last=True, tread_mat=TREAD_MAT)
             self.flight_rails(s, Y_FOOTM, 1, zf, rise, GOING_M)
         for zf in (Z1, Z2):
             self.balustrade([h.P(s, D_BAND + 0.03, Y_TOPM + 0.02 / M), h.P(s, D_BAND + 0.03, Y_FOOTM - 0.02 / M)], zf)
@@ -1624,7 +1625,7 @@ class HouseS(HouseBase):
         h = self
         rise = (Z1 - Z0) / N_RISERS
         I.flight(self.kit, h.P(s, D_AX + 0.003, Y_FOOTS), (0, -1), D_BAND - D_AX - 0.006, N_RISERS - 1, rise, GOING_S,
-                 Z0, waist=0.16, side=-s, tread_top_last=True)
+                 Z0, waist=0.16, side=-s, tread_top_last=True, tread_mat=TREAD_MAT)
         self.flight_rails(s, Y_FOOTS, -1, Z0, rise, GOING_S)
         self.balustrade([h.P(s, D_BAND + 0.03, Y_FOOTS + 0.02 / M), h.P(s, D_BAND + 0.03, Y_TOPS - 0.02 / M)], Z1)
         self.balustrade([h.P(s, D_AX + 0.03, Y_FOOTS - 0.03 / M), h.P(s, D_BAND + 0.03, Y_FOOTS - 0.03 / M)], Z1)
