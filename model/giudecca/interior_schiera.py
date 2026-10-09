@@ -7,31 +7,39 @@ layers.md (build-ups W1/W2/W4/W5/W6/W7, F1/F2/F3, R1/R2/R3) and windows.md
 (joinery, joinery.py). Exterior: schiera.py (guarded edits only).
 
 One dwelling (u = metres from the party axis into the dwelling, Y = drawing row
-in modules; x = xE(a) - s * u, s = +1 for the dwelling west of the axis):
+in modules; x = xE(a) - s * u, s = +1 for the dwelling west of the axis;
+finished faces u 0.10 / 3.22, Y 29.05 / 34.95):
 
-  L0  kitchen + dining-living, one room u 0.10 -> 3.275, Y 29.02 -> 34.98:
-      flat 2.71 under the L1 slab, beam B1 (soffit 2.35) under the bar's south
-      wall, the double-height void over u 0.95 -> 1.75, beam B2 (legs 2.56,
-      middle 3.50) under the terrace's south parapet / oculus panel, sloping
-      ceiling under the lean-to; no partition (n27, n37);
-  L1  bathroom u 0.10 -> 1.75, Y -> 30.35 (door 0.70); landing open to the core
-      through the bar's south wall (lintel 5.08, parapet 3.93 over the void);
-      bedroom u 1.86 -> the end wall / 0.25 wall / joint leaf (door 0.76);
-      terrace u 2.085 -> 3.30 (R3, finish 3.00 as built outside);
+  L0  kitchen + dining-living, one room (no partition, no door; n27, n37):
+      ceiling 2.70 under the L1 slab (raw 2.71), beam B1 (soffit 2.40) under
+      the bar's south wall, the double-height void over u 0.95 -> 1.75, beam
+      B2 under the terrace's south parapet / oculus panel (legs flush with
+      the slab, middle soffit 3.56), sloping ceiling under the lean-to;
+      entrance door from the portico (P, threshold 0.11), kitchen window F
+      (sill 1.43, full-depth RC sill), two French windows D to the garden,
+      lean-to window E with its radiator niche;
+  L1  bathroom u 0.10 -> 1.75, Y -> 30.35 (door 0.70, opens into the bath);
+      landing open to the core through the bar's south wall (lintel 5.01,
+      parapet 3.93 over the void); bedroom u 1.85 -> the end wall / the 0.20
+      wall over the portico partition / its own joint leaf (door 0.73, hinge
+      at the south jamb); terrace u 2.085 -> 3.30 (R3, finish 3.00 as built);
+      bath window F, bedroom window E, terrace door D;
   stair: one straight flight 0.80 wide against the party wall, 15 risers of
       0.2007 and 14 goings of 0.235, foot riser Y 33.194, top riser Y 31.20
       (n5 B, n27, n45), steel balustrade on the void side;
   core: void and flight under the copper vault (R 6.00 soffit from 5.16 at the
-      lining faces, SE 59 / SE 60), lined core walls (W2) and oculus panel.
+      lining faces, SE 59 / SE 60), lined core walls (W2) and oculus panel;
+  party wall: precast flue block at its north end (Y -> 29.40, n27 / n45).
 
 Construction layers: exterior walls W1 = 0.395 face brick + 0.055 insulated
-lining; party wall 0.20 (SE 60 "155 | 20 | 155": double hollow-clay leaf with
-wool in the bar and lean-to zones, the RC spine W4 in the core); partitions W7
-0.11; floors F3 (L0, 320), F1 / F2 (L1 over the kitchen / the portico, 300);
-roofs R1 under the tiles, R2 under the copper; terraces a 0.09 build-up on
-the slab (finish 3.00 as built, n5 F "2,9x"). The roof build-ups follow the
-exterior tile planes (bar 36 %, lean-to 39.5 %), so the finished ceilings sit
-up to 6 cm (bar) / 11 cm (lean-to) off the drawn 34 % line T + 2.47 + 0.34 s.
+lining (running on over lintels and sill blocks); party wall 0.20 (SE 60 "155
+| 20 | 155": double hollow-clay leaf with wool in the bar and lean-to zones,
+the RC spine W4 in the core); partitions 0.10 (n45 "10"); floors F3 (L0,
+320), F1 / F2 (L1 over the kitchen / the portico, 300); roofs R1 under the
+tiles, R2 under the copper; terraces a 0.09 build-up on the slab (finish 3.00
+as built, n5 F "2,9x"). The roof build-ups follow the exterior tile planes
+(bar 36 %, lean-to 39.5 %), so the finished ceilings sit up to 6 cm (bar) /
+11 cm (lean-to) off the drawn 34 % line T + 2.47 + 0.34 s.
 """
 from __future__ import annotations
 
@@ -70,6 +78,7 @@ Y_C = X.Y_CORE                       # 32.93 terrace | lean-to high wall (outer 
 Y_HW = Y_C + dY(X.WALL)              # 33.154 lean-to high wall, inner face
 Y_PB = Y_C - dY(X.PANEL_Y[0])        # 32.785 oculus panel, back face
 Y_PL = Y_PB - dY(0.08)               # 32.736 panel lining face (SE 60 B-B "8 | 14 | 23")
+Y_FLUE = 29.40                       # end of the flue duct in the party wall (n27 / n45 hatch 29.05 -> 29.40)
 Y_BATH = 30.38                       # bathroom | landing partition axis (verified: n45 faces 30.35 / 30.41)
 Y_BED_DOOR = (30.46, 30.90)          # bedroom door jambs (n45, all 8)
 Y_FOOT = 33.194                      # foot riser (n27 33.19, n5 B)
@@ -115,6 +124,8 @@ PARTY_SEP = [('Plaster', 'M_PlasterInt', 0.015), ('Leaf', 'M_HollowBrick', 0.075
              ('Wool', 'M_Insulation', 0.020), ('Leaf', 'M_HollowBrick', 0.075),
              ('Plaster', 'M_PlasterInt', 0.015)]      # W5 adjusted to the written 0.20 (SE 60)
 PARTY_SPINE = B.WALL_SPINE                            # W4 200 in the core: the flights bear on it
+PARTY_FLUE = [('FluePlaster', 'M_PlasterInt', 0.015), ('Flue', 'M_Structure', 0.170),
+              ('FluePlaster', 'M_PlasterInt', 0.015)]  # precast flue block in the party wall (n27 / n45)
 TERRACE_THIN = [('Tiles', 'M_Stone', 0.015), ('Bed', 'M_Screed', 0.020), ('Membrane', 'M_Membrane', 0.010),
                 ('Insulation', 'M_Insulation', 0.030), ('Falls', 'M_Screed', 0.015)]   # 90 on the slab
 PLASTER = [('Plaster', 'M_PlasterInt', 0.015)]        # on internal masonry (bay walls, joint leaves)
@@ -290,10 +301,57 @@ def _door_cfg(a, b, s_hinge, room):
 
 def _register_types() -> None:
     """Opening types of the schiera not in joinery.TYPES: the entrance door
-    with its frame behind the 0.37 jamb (SE 53 A, windows.md P), and the
+    with its frame at the inner face of the 0.395 jamb, in the lining plane
+    (SE 53 A: "frame at d 0.395 -> 0.455", windows.md P schiera), and the
     oculus glass ring inside the panel lining (windows.md O60)."""
-    J.TYPES.setdefault('PS', dict(J.TYPES['P'], frame_at=0.33))
+    J.TYPES['PS'] = dict(J.TYPES['P'], frame_at=J.WALL)
     J.TYPES.setdefault('OS', dict(J.TYPES['O'], frame_at=0.16))
+    # finestre schiera (kitchen, bath; sill 1.43): joinery puts the handle at floor + 1.05,
+    # under these high sills, so the handle is built here on the sash (_f_handle)
+    J.TYPES['FS'] = dict(J.TYPES['F'], handle=False)
+
+
+# ------------------------------------------------------------------ extra opening parts
+F_SILL = (0.12, 0.13)                # sill F: 1.15 x 0.395 x 0.13, full depth (SE 53 F, windows.md 6)
+P_SILL = (0.06, 0.11)                # entrance threshold: (W + 0.12) x 0.46 x 0.11, top 0.00 (SE 53 A)
+T_SILL = 0.03                        # terrace-door threshold slab (flush with the bedroom floor, A)
+
+
+def _extra_parts(r) -> list[tuple]:
+    """(u0, u1, z0, z1, d0, d1) of the concrete parts the joinery does not
+    build for the schiera's plain-jamb openings: the inner part of the full-
+    depth RC sill of the F windows (kitchen, bath; behind the exterior's
+    0.115 sill), the concrete threshold of the entrance door, and a flush
+    threshold under the terrace doors (sill at floor level: joinery adds
+    none, so the wall lining's top showed in the doorway)."""
+    kind = J.classify(r)
+    if r['kind'] != 'rect' or kind not in ('F', 'FS', 'PS', 'C', 'D'):
+        return []
+    u0, u1, z0, z1 = J.dims(r)
+    if kind in ('F', 'FS'):
+        e, h = F_SILL
+        return [(u0 - e, u1 + e, z0 - h, z0, 0.115, J.WALL)]
+    if kind in ('C', 'D'):
+        zf = J.floor_of(z0)
+        if z0 - zf > 0.01:
+            return []
+        return [(u0 - J.MAZ, u1 + J.MAZ, z0 - T_SILL, z0, 0.0, J.FINISH)]
+    e, h = P_SILL
+    return [(u0 - e, u1 + e, z0 - h, z0, -0.01, J.FINISH)]
+
+
+def _extra_pockets(r) -> list[tuple]:
+    """Their pockets in the hollowing cutter (into the room, like the
+    joinery pockets), plus the seat of the exterior's 0.115 F sill (it
+    overlapped the brick under the opening)."""
+    out = []
+    for u0, u1, z0, z1, d0, d1 in _extra_parts(r):
+        out.append((u0, u1, z0, z1, -0.01 if d0 <= 0.0 else d0, J.FINISH + 0.05))   # thresholds: from
+        #                                                 in front of the face (air), no coplanar cutter face
+        if J.classify(r) in ('F', 'FS'):
+            uc, w = (u0 + u1) / 2, u1 - u0 - 2 * F_SILL[0]
+            out.append((uc - w / 2 - 0.08, uc + w / 2 + 0.08, z1 - 0.06, z1, -0.01, 0.1153))
+    return out
 
 
 # ------------------------------------------------------------------ hollowing
@@ -350,21 +408,137 @@ def _pockets(r) -> list[tuple]:
     return out
 
 
+def _f_handle(kit, r) -> None:
+    """Lever of the single casement of an F window at mid-height of the sash,
+    on the latch stile (as joinery.opening places it, but not at floor +
+    1.05, which is under the 1.43 sill)."""
+    sp = J.spec_for('FS')
+    fw, fd = sp['frame']
+    sw, sd = sp['sash']
+    u0, u1, z0, z1 = J.dims(r)
+    ds = J.WALL + (fd - sd) / 2
+    uh, zh = u1 - fw - sw / 2, (z0 + z1) / 2
+    hb = kit('WindowHandles', 'M_Steel')
+    I.face_box(hb, r, uh - 0.012, uh + 0.012, zh - 0.07, zh + 0.07, ds + sd, ds + sd + 0.012)
+    I.face_box(hb, r, uh - 0.012, uh + 0.012, zh - 0.10, zh + 0.012, ds + sd + 0.012, ds + sd + 0.06)
+
+
+def _niche_reveals(kit, r) -> None:
+    """Plaster returns in the radiator niche under an E window (joinery builds
+    its back, NicheLining): 1 cm on both sides and under the sill block, and a
+    1 cm plaster upstand on its floor, so the wall lining's cut ends (adhesive,
+    insulation, board) do not show round the niche."""
+    s = J.spec_for(J.classify(r))
+    if not s['niche'] or r['kind'] != 'rect':
+        return
+    u0, u1, z0, z1 = J.dims(r)
+    zf = J.floor_of(z0)
+    a, b = u0 - J.MAZ, u1 + J.MAZ
+    d0, d1 = J.STOP + J.LIN, J.FINISH
+    zt = z0 - 0.13
+    bm = kit('NicheLining', 'M_PlasterInt')
+    I.face_box(bm, r, a, b, zf, zf + PL, d0, d1)
+    I.face_box(bm, r, a, b, zt - PL, zt, d0, d1)
+    I.face_box(bm, r, a, a + PL, zf + PL, zt - PL, d0, d1)
+    I.face_box(bm, r, b - PL, b, zf + PL, zt - PL, d0, d1)
+
+
 def _add_pockets(bm, recs) -> None:
     for r in recs:
-        for u0, u1, z0, z1, d0, d1 in _pockets(r):
+        for u0, u1, z0, z1, d0, d1 in _pockets(r) + _extra_pockets(r):
             I.face_box(bm, r, u0, u1, z0, z1, d0, d1)
 
 
+def _lining_rects(r) -> list[tuple]:
+    """(u0, u1, z0, z1) rectangles an opening takes out of the wall linings
+    besides its outline: the frame pocket behind a stop jamb (its reveal
+    plaster runs to the finished face), the window board, the radiator
+    niche, the French-window and entrance thresholds. The linings run on
+    over the lintels and sill blocks (joinery.lining_cutter cuts their
+    pockets too, which left 55 mm deep bands of bare concrete over and
+    under every opening)."""
+    kind = J.classify(r)
+    if kind is None or r['kind'] != 'rect':
+        return []
+    s = J.spec_for(kind)
+    u0, u1, z0, z1 = J.dims(r)
+    zf = J.floor_of(z0)
+    maz = J.MAZ
+    out = []
+    if s['jamb'] == 'stop':
+        out.append((u0 - maz, u1 + maz, z0, z1 + maz))
+    if not s['door'] and s['board'] and z0 - zf > 0.5:
+        e = maz + 0.02 if s['jamb'] == 'stop' else 0.02
+        out.append((u0 - e, u1 + e, z0 - 0.025, z0))
+    if s['niche']:
+        out.append((u0 - maz, u1 + maz, zf, z0 - 0.13))
+    if s['door'] and kind in ('C', 'D') and z0 - zf > 0.01:
+        out.append((u0 - maz, u1 + maz, zf - 0.02, z0))
+    for p0, p1, q0, q1, _, _ in _extra_parts(r):
+        if kind != 'FS':
+            out.append((p0, p1, q0, q1))           # thresholds through the lining zone
+    return out
+
+
+def _rect_union(rects) -> list[list[tuple[float, float]]]:
+    """Outline loops (u, z), counter-clockwise, of the union of axis-aligned
+    rectangles (u0, u1, z0, z1): one exact outline per connected group, so
+    the lining cutter has no coincident or coplanar overlapping faces (the
+    exact boolean failed on overlapping boxes sharing a plane)."""
+    us = sorted({v for r in rects for v in r[:2]})
+    zs = sorted({v for r in rects for v in r[2:]})
+    cov = set()
+    for i in range(len(us) - 1):
+        um = (us[i] + us[i + 1]) / 2
+        for j in range(len(zs) - 1):
+            zm = (zs[j] + zs[j + 1]) / 2
+            if any(a < um < b and c < zm < d for a, b, c, d in rects):
+                cov.add((i, j))
+    nxt = {}
+    for i, j in cov:
+        if (i, j - 1) not in cov:
+            nxt.setdefault((i, j), []).append((i + 1, j))
+        if (i + 1, j) not in cov:
+            nxt.setdefault((i + 1, j), []).append((i + 1, j + 1))
+        if (i, j + 1) not in cov:
+            nxt.setdefault((i + 1, j + 1), []).append((i, j + 1))
+        if (i - 1, j) not in cov:
+            nxt.setdefault((i, j + 1), []).append((i, j))
+    loops = []
+    while nxt:
+        start = next(iter(nxt))
+        loop, v = [], start
+        while True:
+            loop.append(v)
+            w = nxt[v].pop()
+            if not nxt[v]:
+                del nxt[v]
+            v = w
+            if v == start:
+                break
+        pts = [(us[i], zs[j]) for i, j in loop]
+        n = len(pts)
+        keep = [p for k, p in enumerate(pts)                       # drop collinear corners
+                if not ((pts[k - 1][0] == p[0] == pts[(k + 1) % n][0]) or
+                        (pts[k - 1][1] == p[1] == pts[(k + 1) % n][1]))]
+        loops.append(keep)
+    return loops
+
+
 def _lining_cutter(recs):
-    """joinery.lining_cutter with _pockets (see there)."""
+    """Cutter for the wall linings round the openings: per opening one
+    solid of the union of its outline and _lining_rects."""
     bm = bmesh.new()
     for r in recs:
         if J.classify(r) is None and r.get('through') is None:
             continue
-        geo.Face(r['axis'], r['coord'], r['out']).solid(bm, r['outline'], 1.2, outside=0.3)
-        for u0, u1, z0, z1, d0, d1 in _pockets(r):
-            I.face_box(bm, r, u0, u1, z0, z1, J.WALL - 0.02, 1.2)
+        f = geo.Face(r['axis'], r['coord'], r['out'])
+        rects = _lining_rects(r)
+        if not rects:
+            f.solid(bm, r['outline'], 1.2, outside=0.3)
+            continue
+        for loop in _rect_union([J.dims(r)] + rects):
+            f.solid(bm, loop, 1.2, outside=0.3)
     return bm
 
 
@@ -448,7 +622,10 @@ def _block(kit, a):
         a_, b_ = blk.p(0, Y0), blk.p(0, Y1)
         L = (Y1 - Y0) * M
         _wall(kit, a_, b_, _notched(L, z0, [((Yt - Y0) * M, z) for Yt, z in tops]), layers, 'PartyWall')
-    seg(Y_NI, Y_BI, [(Y_NI, RAW_BAR(xa, yY(Y_NI))), (Y_BI, RAW_BAR(xa, yY(Y_BI)))], PARTY_SEP)
+    # flue / vent duct at the north end of the party wall, between the two boilers (n27, n45
+    # hatched at both levels): a precast flue block in the wall's 0.20, plastered
+    seg(Y_NI, Y_FLUE, [(Y_NI, RAW_BAR(xa, yY(Y_NI))), (Y_FLUE, RAW_BAR(xa, yY(Y_FLUE)))], PARTY_FLUE)
+    seg(Y_FLUE, Y_BI, [(Y_FLUE, RAW_BAR(xa, yY(Y_FLUE))), (Y_BI, RAW_BAR(xa, yY(Y_BI)))], PARTY_SEP)
     z_cr = _arc(ZC_IN, R_SLAB)(U_PW) - 0.002                             # 2 mm under the vault slab
     seg(Y_BI, Y_HW, [(Y_BI, Z_LINTEL), (Y_BO + dY(PL), Z_LINTEL), (Y_BO + dY(PL), z_cr), (Y_PL, z_cr),
                      (Y_PL, Z_B2M), (Y_HW, Z_B2M)], PARTY_SPINE)
@@ -507,7 +684,7 @@ def _dwelling(kit, dw: Dw):
     # L0 ceilings: plaster under the L1 slab (kitchen, under the terrace)
     I.prism(pl, dw.poly([(U_PW, yNf), (U_BS - LIN, yNf), (U_BS - LIN, Y_BI - dY(PL)),
                          (U_VD - PL, Y_BI - dY(PL)), (U_VD - PL, Y_LND), (U_PW, Y_LND)]), RAW - PL, RAW)
-    I.prism(pl, dw.rect(U_CM, U_BS - LIN, Y_BO + dY(PL), Y_HW + dY(LIN)), RAW - PL, RAW)     # terrace + B2
+    I.prism(pl, dw.rect(U_CL, U_BS - LIN, Y_BO, Y_HW + dY(LIN)), RAW - PL, RAW)    # terrace + B2, core lining
     # beam B1 under the bar's south wall (u 0.95 -> 3.275, soffit 2.40), plastered; the top of
     # the flight bears on the landing slab beside it
     dw.box(beams, U_VD, U_BS, Y_BI, Y_BO, Z_B1, RAW)
@@ -517,16 +694,16 @@ def _dwelling(kit, dw: Dw):
     dw.box(pl, U_CL, U_BS - LIN, Y_BO, Y_BO + dY(PL), Z_B1, RAW - PL)                          # ... under the terrace
     dw.box(pl, U_VD - PL, U_VD, Y_BI, Y_BO, Z_B1, RAW)                                         # end face
     # beam B2 legs: RC inside the lean-to's high wall behind the terrace's face brick, on the
-    # slab (soffit flush with it, SE 60 A-A / elevation); plaster on the slab and beam ends
+    # slab (soffit flush with it, SE 60 A-A / elevation); its end is lined with the core walls
     dw.box(beams, U_CM, U_BS, Y_C + dY(B2_LEAF), Y_HW, SLAB_TOP, Z_B2L_TOP)
-    dw.box(pl, U_CM - PL, U_CM, Y_PB, Y_HW, RAW - PL, Z_B2M - PL)
     # lean-to: lining on the high wall, sloping ceiling lining (R1 under the roof slab)
     _layers_box(kit, 'Wall', B.LINING, dw, U_CM, U_BS, Y_HW, None, RAW, CEIL_LEAN, 'Y', +1)
     I.sloped_stack(kit, dw.rect(U_PW, U_BS, Y_HW, Y_SI), RAW_LEAN, B.LINING, 'Ceiling', SLOPE_LEAN)
     # beam B2 middle (block object): soffit plaster per dwelling, south face strip
-    I.prism(pl, dw.poly([(U_PW, Y_PL), (U_CL, Y_PL), (U_CL, Y_PB), (U_CM, Y_PB), (U_CM, Y_HW + dY(PL)),
-                         (U_PW, Y_HW + dY(PL))]), Z_B2M - PL, Z_B2M)
-    I.prism(pl, dw.rect(U_PW, U_CM, Y_HW, Y_HW + dY(PL)), Z_B2M, CEIL_LEAN)
+    # (the core lining wraps the leg's end under it and the corner beyond, see the core below)
+    I.prism(pl, dw.poly([(U_PW, Y_PL), (U_CL, Y_PL), (U_CL, Y_PB), (U_CM, Y_PB), (U_CM, Y_HW), (U_CL, Y_HW),
+                         (U_CL, Y_HW + dY(PL)), (U_PW, Y_HW + dY(PL))]), Z_B2M - PL, Z_B2M)
+    I.prism(pl, dw.rect(U_PW, U_CL, Y_HW, Y_HW + dY(PL)), Z_B2M, CEIL_LEAN)
 
     # ---------------- L1: slab, floors, linings, partitions, doors, ceiling
     slab = kit('FloorSlab', 'M_Structure')
@@ -586,8 +763,15 @@ def _dwelling(kit, dw: Dw):
     # ---------------- core: wall lining (W2), vault lining, stair, balustrade
     xa = dw.xa
     cl = dw.x(U_CL)
-    _layers_box(kit, 'Wall', B.LINING, dw, U_CM, None, Y_BO, Y_PB, RAW - PL,
+    # (it stands on the L0 ceiling plaster, which runs under it to the void edge)
+    _layers_box(kit, 'Wall', B.LINING, dw, U_CM, None, Y_BO, Y_PB, RAW,
                 lambda x, y: _arc(ZC_IN, R_SLAB)(x - xa), 'u', -1)
+    # ... on along the end of beam B2's leg under the B2 middle soffit plaster, and a solid
+    # board corner where it meets the lean-to high wall's lining: no lining edge in view
+    # (without the adhesive bed there: it would touch the high wall's along an edge only)
+    no_bed = [(e, None if e == 'LiningAdhesive' else m, t) for e, m, t in B.LINING]
+    _layers_box(kit, 'Wall', no_bed, dw, U_CM, None, Y_PB, Y_HW, RAW, Z_B2M - PL, 'u', -1)
+    I.prism(kit('WallLiningBoard', 'M_PlasterInt'), dw.rect(U_CL, U_CM, Y_HW, Y_HW + dY(LIN)), RAW, CEIL_LEAN)
     xs = _grid(xa, dw.x(U_PW), cl)
     r = R_SLAB
     for elem, mat, t in B.LINING:
@@ -619,8 +803,9 @@ def build(ctx) -> None:
         body = bpy.data.objects[f'SM_Schiera_Body_{tag}']
         recs = [r for r in I.openings_of(body.name) if r['kind'] != 'arch']
         for r in recs:
-            if J.classify(r) == 'P':
-                r['type'] = 'PS'
+            kind = J.classify(r)
+            if kind in ('P', 'F'):
+                r['type'] = kind + 'S'
         x_lo, x_hi = sorted((xE(E0), xE(E1)))
         precs = [r for r in panel_recs if x_lo < r['u'] < x_hi]
         # 1. hollow the body: rooms, slabs, core, beams' seats, joinery pockets
@@ -639,6 +824,13 @@ def build(ctx) -> None:
             for s in (1, -1):
                 _dwelling(kit, Dw(a, s))
         J.build_openings(kit, recs + precs)
+        for r in recs:
+            for part in _extra_parts(r):
+                name = 'SillBlocks' if J.classify(r) == 'FS' else 'Thresholds'      # M_Concrete both
+                I.face_box(kit(name, 'M_Concrete'), r, *part)
+            if J.classify(r) == 'FS':
+                _f_handle(kit, r)
+            _niche_reveals(kit, r)
         objs = kit.flush()
         # 3. linings cut round the windows and doors (and the oculi)
         for name, o in objs.items():

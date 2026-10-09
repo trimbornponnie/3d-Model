@@ -76,18 +76,27 @@ FIN_OPEN = B.FLOOR_OPEN[:3]          # parquet, screed, insulation (F2)
 FIN_GF = B.FLOOR_GF[:4]              # parquet, screed, insulation, fill (F3)
 HALL_GF = [('Floor', 'M_Screed', 0.030), ('Screed', 'M_Screed', 0.090)]     # cement floor (SE 58)
 HALL_UP = [('Floor', 'M_Screed', 0.030), ('Screed', 'M_Screed', 0.070)]
-PORCH = [('Tiles', 'M_Stone', 0.020), ('Bed', 'M_Screed', 0.030), ('Falls', 'M_Screed', 0.070)]
-LOGGIA = [('Tiles', 'M_Stone', 0.015), ('Bed', 'M_Screed', 0.025), ('Membrane', 'M_Membrane', 0.010),
+# outdoor paving of porch, loggia and terraces: frost-proof cotto / klinker tiles (layers.md R3),
+# M_Brick - the fired-clay red the exterior-only build shows on these floors
+PORCH = [('Tiles', 'M_Brick', 0.020), ('Bed', 'M_Screed', 0.030), ('Falls', 'M_Screed', 0.070)]
+LOGGIA = [('Tiles', 'M_Brick', 0.015), ('Bed', 'M_Screed', 0.025), ('Membrane', 'M_Membrane', 0.010),
           ('Falls', 'M_Screed', 0.050)]
-TERRACE = [('Tiles', 'M_Stone', 0.015), ('Bed', 'M_Screed', 0.020), ('Membrane', 'M_Membrane', 0.010),
+TERRACE = [('Tiles', 'M_Brick', 0.015), ('Bed', 'M_Screed', 0.020), ('Membrane', 'M_Membrane', 0.010),
            ('Insulation', 'M_Insulation', 0.040), ('Falls', 'M_Screed', 0.015)]   # R3 on the slab, finish 9.02 as built
+PARQ_T = FIN_INT[0][2]               # 0.015 parquet (radiator niches)
+TREAD_MAT = 'M_DoorLeaf'             # hardwood treads of the private flights, oak like the parquet (towers.md T.5)
+FPL = 0.015                          # plaster under the L2 -> L3 flight (inside the duplex)
 PLASTER = [('Plaster', 'M_PlasterInt', PL)]
 SPINE_DUP = [('SpineInsulation', 'M_Insulation', 0.030), ('Plaster', 'M_PlasterInt', PL)]   # SE 58 "33 ISOLAZIONE"
 HALLWALL = [('LiningInsulation', 'M_Insulation', 0.020), ('LiningBoard', 'M_PlasterInt', 0.010)]
 PART_WET = B.PARTITION_WET           # 0.15 under the L3 hall wall
 PART_STD = B.PARTITION               # 0.11
 ROOF_STRUCT = [l for l in B.ROOF_TILE_UNDER if not l[0].startswith('Lining')]    # 0.205 under the tiles
-VAULT_STRUCT = [l for l in B.ROOF_VAULT_UNDER if not l[0].startswith('Lining')]  # 0.252 under the copper
+# R2 under the copper: the drawn layers (membrane, insulation, topping, curved slab; 0.205) right
+# under the exterior's 60 mm copper shell, which stands for copper + boarding + battens (layers.md
+# R2 rule: keep the drawn layers, the assumed boarding / batten zone takes up the rest)
+VAULT_STRUCT = [l for l in B.ROOF_VAULT_UNDER
+                if not l[0].startswith('Lining') and l[0] not in ('Boarding', 'Battens')]
 UNDER_FLIGHT = [('FlightInsulation', 'M_Insulation', 0.040), ('FlightPlaster', 'M_PlasterInt', 0.020)]
 
 # ------------------------------------------------------------------ E lines (modules)
@@ -111,6 +120,7 @@ E_P0 = (2.88, 2.88 + e(0.11))        # L0 / L1 kitchen and bathroom partitions (
 EF_OW, EF_SB, EF_IW = E_OW + e(LIN), E_SBI + e(LIN), E_IW - e(LIN)
 EF_BW, EF_HO = E_BWI + e(LIN), E_HOI - e(LIN)
 EF_SPD = E_SPL + e(0.045)            # 3.4622 spine, duplex side = stairwell edge at L2 / L3
+EF_SPW = EF_SPD - e(PL)              # slabs at the stairwell's spine side stop behind its edge plaster
 EF_SPU, EF_SPL = E_SPU - e(PL), E_SPL + e(PL)     # 3.262 / 3.444 spine plaster in the hall
 EF_IWH = E_IW - e(PL)                # inner wall plaster in the hall
 
@@ -121,6 +131,7 @@ D_MID = TOWER['mid'] * M / 2         # 2.105 middle part / pavilion middle-side 
 D_PW = D_MID + W1                    # 2.50 pavilion middle-side wall, room-side masonry face
 D_L2W = 2.25                         # L2 walls (25) and the L1 vestibule's north wall, middle-side face
 DF_END, DF_PW = D_ENDI - LIN, D_PW + LIN          # 5.695 / 2.555 finished
+DF_PW2 = D_PW + PL                   # L2 pavilion wall, plastered room face (n28: 25 + plaster)
 D_LOBBY = -0.855                     # lobby end / flight 1 foot (SE 58 "125")
 D_HL = 1.245                         # half-landing edge (SE 58 "335")
 D_L1L = -0.555                       # L1 landing end (SE 58 "155")
@@ -129,6 +140,7 @@ D_VF, D_VT = -0.905, 2.385           # private flights: first and last riser (SE
 D_BATH2 = (-3.56, -3.45)             # L2 bathroom partition (n28)
 D_SHOW3 = (3.50, 3.61)               # L3 shower-room partition (n46)
 SJ = 0.06                            # D13 / D16: jamb by the long partition (architraves clear of it)
+SILL_T = 0.03                        # stone sills of the entrance doors D1 / D2
 
 # ------------------------------------------------------------------ levels
 Z0, Z1, Z2, Z3 = FLOORS
@@ -164,49 +176,152 @@ SOFF2, D_HIT2, Z_SOFTOP2, SLOPE2 = _flight_geom(Z2, (Z3 - Z2) / FL_N)
 
 
 # ------------------------------------------------------------------ helpers
-def _rect_minus(a0, a1, z0, z1, holes):
-    """Rectangle [a0, a1] x [z0, z1] minus the union of hole rectangles, as a
-    list of rectangles (grid cells merged into columns of strips)."""
+def _snap(vals, tol=5e-4):
+    """Sorted distinct values, those closer than tol merged (no slivers)."""
+    out = []
+    for v in sorted(vals):
+        if not out or v - out[-1] > tol:
+            out.append(v)
+    return out
+
+
+def _faces(a0, a1, z0, z1, holes, tol=5e-4):
+    """Rectangle [a0, a1] x [z0, z1] minus the union of hole rectangles as
+    [(outer, [inner, ...]), ...]: the outlines (a, z) of the free grid cells,
+    outer loops counter-clockwise with the hole loops inside them - one solid
+    with real holes per piece of wall (fewer triangles than a rectangle
+    cover)."""
+    if z1 - z0 < tol or a1 - a0 < tol:
+        return []
     hs = []
     for h0, h1, k0, k1 in holes:
         h0, h1 = max(min(h0, h1), a0), min(max(h0, h1), a1)
         k0, k1 = max(k0, z0), min(k1, z1)
-        if h1 - h0 > 1e-6 and k1 - k0 > 1e-6:
+        if h1 - h0 > tol and k1 - k0 > tol:
             hs.append((h0, h1, k0, k1))
     if not hs:
-        return [(a0, a1, z0, z1)]
-    us = sorted({a0, a1} | {v for h in hs for v in h[:2]})
-    zs = sorted({z0, z1} | {v for h in hs for v in h[2:]})
-    cols = []
-    for i in range(len(us) - 1):
-        ua, ub = us[i], us[i + 1]
-        um = (ua + ub) / 2
-        strips, cur = [], None
-        for j in range(len(zs) - 1):
-            zm = (zs[j] + zs[j + 1]) / 2
-            free = not any(h[0] < um < h[1] and h[2] < zm < h[3] for h in hs)
-            if free:
-                cur = [zs[j], zs[j + 1]] if cur is None else [cur[0], zs[j + 1]]
-            elif cur is not None:
-                strips.append(tuple(cur))
-                cur = None
-        if cur is not None:
-            strips.append(tuple(cur))
-        if cols and cols[-1][2] == strips and abs(cols[-1][1] - ua) < 1e-9:
-            cols[-1][1] = ub
-        else:
-            cols.append([ua, ub, strips])
-    return [(ua, ub, za, zb) for ua, ub, strips in cols for za, zb in strips]
+        return [([(a0, z0), (a1, z0), (a1, z1), (a0, z1)], [])]
+    us = _snap([a0, a1] + [v for h in hs for v in h[:2]], tol)
+    zs = _snap([z0, z1] + [v for h in hs for v in h[2:]], tol)
+    us[0], us[-1], zs[0], zs[-1] = a0, a1, z0, z1
+    nu, nz = len(us) - 1, len(zs) - 1
+    free = [[not any(h[0] < (us[i] + us[i + 1]) / 2 < h[1] and h[2] < (zs[j] + zs[j + 1]) / 2 < h[3] for h in hs)
+             for j in range(nz)] for i in range(nu)]
+
+    def ok(i, j):
+        return 0 <= i < nu and 0 <= j < nz and free[i][j]
+    edges = {}
+    for i in range(nu):
+        for j in range(nz):
+            if not free[i][j]:
+                continue
+            if not ok(i, j - 1):
+                edges.setdefault((i, j), []).append((i + 1, j))
+            if not ok(i + 1, j):
+                edges.setdefault((i + 1, j), []).append((i + 1, j + 1))
+            if not ok(i, j + 1):
+                edges.setdefault((i + 1, j + 1), []).append((i, j + 1))
+            if not ok(i - 1, j):
+                edges.setdefault((i, j + 1), []).append((i, j))
+    loops = []
+    while edges:
+        start = next(iter(edges))
+        loop, cur, prev = [start], start, None
+        while True:
+            nxt = edges[cur]
+            if len(nxt) > 1 and prev is not None:           # pinch: keep the free cells on the left
+                d0 = (cur[0] - prev[0], cur[1] - prev[1])
+                nxt.sort(key=lambda q: -(d0[0] * (q[1] - cur[1]) - d0[1] * (q[0] - cur[0])))
+            q = nxt.pop(0)
+            if not nxt:
+                del edges[cur]
+            prev, cur = cur, q
+            if cur == start:
+                break
+            loop.append(cur)
+        pts = [(us[i], zs[j]) for i, j in loop]
+        n = len(pts)
+        simp = [pts[k] for k in range(n)
+                if abs((pts[k][0] - pts[k - 1][0]) * (pts[(k + 1) % n][1] - pts[k][1])
+                       - (pts[k][1] - pts[k - 1][1]) * (pts[(k + 1) % n][0] - pts[k][0])) > 1e-12]
+        loops.append(simp)
+    outers = [lp for lp in loops if I.area(lp) > 0]
+    inners = [lp for lp in loops if I.area(lp) < 0]
+    groups = [(o, []) for o in outers]
+
+    def inside(pt, poly):
+        x, y = pt
+        c = False
+        for k in range(len(poly)):
+            (xa, ya), (xb, yb) = poly[k - 1], poly[k]
+            if (ya > y) != (yb > y) and x < xa + (y - ya) * (xb - xa) / (yb - ya):
+                c = not c
+        return c
+    for h in inners:
+        probe = ((h[0][0] + h[1][0]) / 2 + 1e-5, (h[0][1] + h[1][1]) / 2 + 1e-5)
+        for o, ins in groups:
+            if inside(h[0], o) or inside(probe, o):
+                ins.append(h)
+                break
+    return groups
 
 
-def _door_cfg(a, b, s_hinge, room):
-    """hinge ('a' / 'b') and swing (+1 left of a -> b / -1) of a door hinged at
-    s_hinge metres from a and opening into the side of the point `room`."""
+def _fill(loops) -> list[tuple[int, int, int]]:
+    """Triangles (indices into the concatenated loops) filling a planar (a, z)
+    outline with holes: bmesh triangle fill with beauty rotation, which,
+    unlike a plain scanline fill, leaves no zero-area triangles where hole
+    edges line up."""
+    bm = bmesh.new()
+    flat = [p for lp in loops for p in lp]
+    vs = [bm.verts.new((a, z, 0.0)) for a, z in flat]
+    es, o = [], 0
+    for lp in loops:
+        n = len(lp)
+        es += [bm.edges.new((vs[o + k], vs[o + (k + 1) % n])) for k in range(n)]
+        o += n
+    bmesh.ops.triangle_fill(bm, use_beauty=True, use_dissolve=False, edges=es, normal=(0.0, 0.0, 1.0))
+    bm.verts.index_update()
+    tris = [tuple(v.index for v in f.verts) for f in bm.faces]
+    bm.free()
+    return tris
+
+
+def _lining_rects(r) -> list[tuple]:
+    """(u0, u1, z0, z1) rectangles an opening takes out of the wall lining:
+    the opening, the frame pocket behind a stop jamb (its reveal plaster runs
+    to the finished face), the window board, the radiator niche and the RC
+    threshold of French doors. The lining runs on over the lintel and the
+    sill block (joinery.lining_cutter cuts their pockets as well, which
+    would leave 55 mm deep bands of bare concrete over and under every
+    window)."""
+    kind = J.classify(r)
+    u0, u1, z0, z1 = J.dims(r)
+    out = [(u0, u1, z0, z1)]
+    if kind is None:
+        return out
+    s = J.spec_for(kind)
+    zf = J.floor_of(z0)
+    maz = J.MAZ
+    if s['jamb'] == 'stop' and r['kind'] == 'rect':
+        out.append((u0 - maz, u1 + maz, z0, z1 + maz))
+    if not s['door'] and s['board'] and r['kind'] == 'rect' and z0 - zf > 0.5:
+        e = maz + 0.02 if s['jamb'] == 'stop' else 0.02
+        out.append((u0 - e, u1 + e, z0 - 0.025, z0))
+    if s['niche'] and r['kind'] == 'rect':
+        out.append((u0 - maz, u1 + maz, zf - PARQ_T, z0 - 0.13))     # down to the niche parquet
+    if s['door'] and kind in ('C', 'D') and z0 - zf > 0.01:
+        out.append((u0 - maz, u1 + maz, zf - 0.02, z0))
+    return out
+
+
+def _door_cfg(a, b, s_hinge, s_centre, room):
+    """hinge ('a' / 'b': the door's jamb on the a or b side) and swing (+1 =
+    left of a -> b / -1) of a door centred s_centre metres from a, hinged on
+    its jamb at s_hinge and opening into the side of the point `room`."""
     A, Bv = Vector(a), Vector(b)
     ev = (Bv - A).normalized()
     n = Vector((-ev.y, ev.x))
-    L = (Bv - A).length
-    return ('a' if s_hinge < L / 2 else 'b'), (1 if n.dot(Vector(room) - A) > 0 else -1)
+    return ('a' if s_hinge < s_centre else 'b'), (1 if n.dot(Vector(room) - A) > 0 else -1)
 
 
 def _wall(kit, a, b, outline_sz, layers, prefix):
@@ -237,7 +352,14 @@ def _register_types() -> None:
     dwelling face (SE 53 B, SE 65; no lintel: the 0.395 L-lintel would stand
     out of these walls), and the street door, framed flush with the inner face
     of the 0.23 inner wall left behind the as-built face E 4.12 (the exterior
-    steps end on it, towers.ENTRANCE_FRAME)."""
+    steps end on it, towers.ENTRANCE_FRAME). 'FT', 'ET' and 'E1T' are the
+    casement windows of types F, E and E1 with their handles built here
+    (window_handles, at mid-sash): joinery.opening puts a window's handle at
+    min(z_f + 1.05, ...), which lands on the bottom rail of the E / E1
+    sashes (sill z_f + 0.94) and 38 cm below the F sash (sill z_f + 1.43)."""
+    J.TYPES.setdefault('FT', dict(J.TYPES['F'], handle=False))
+    J.TYPES.setdefault('ET', dict(J.TYPES['E'], handle=False))
+    J.TYPES.setdefault('E1T', dict(J.TYPES['E1'], handle=False))
     J.TYPES.setdefault('PTW', dict(J.TYPES['P'], lintel=False, frame_at=0.25 + LIN - 0.065))
     J.TYPES.setdefault('PTS', dict(J.TYPES['P'], lintel=False, frame_at=0.30 + 0.03 - 0.065))
     J.TYPES.setdefault('PTE', dict(J.TYPES['PT'], frame_at=X.ENTRANCE_FRAME))
@@ -246,9 +368,15 @@ def _register_types() -> None:
 def _pockets(r) -> list[tuple]:
     """joinery.pockets(r); pockets that start on the outer face start 1 cm in
     front of it (a cutter face coplanar with the façade leaves double faces),
-    and a stop pocket sitting on a threshold pocket reaches 0.5 mm into it
-    (shared corners)."""
-    ps = [(u0, u1, z0, z1, -0.01 if d0 <= 0.0 else d0, d1) for u0, u1, z0, z1, d0, d1 in J.pockets(r)]
+    a stop pocket sitting on a threshold pocket reaches 0.5 mm into it
+    (shared corners), and the radiator niche reaches PARQ_T below the floor
+    for the parquet that runs into it (niche_finishes)."""
+    kind = J.classify(r)
+    zn = None
+    if kind is not None and r['kind'] == 'rect' and J.spec_for(kind)['niche']:
+        zn = J.floor_of(J.dims(r)[2])
+    ps = [(u0, u1, z0 - PARQ_T if zn is not None and abs(z0 - zn) < 1e-9 and abs(d0 - J.STOP) < 1e-9 else z0,
+           z1, -0.01 if d0 <= 0.0 else d0, d1) for u0, u1, z0, z1, d0, d1 in J.pockets(r)]
     out = []
     for p in ps:
         u0, u1, z0, z1, d0, d1 = p
@@ -304,6 +432,7 @@ class _Tower:
         self.kit = I.Kit(ctx, PART, f'E{k}', COL_E)
         self.cut = bmesh.new()
         self.zones = []                             # (x0, x1, y0, y1, z0, top) painted M_PlasterInt
+        self.edged = set()                          # kit objects with plastered edge faces (slot 1)
         # roof planes: tile undersides (towers.roofs) of the N / S pavilions and the lean-to
         self.tile = {}
         for s, (Ye, Yi) in zip((-1, 1), self.tw.pavs):
@@ -441,8 +570,8 @@ class _Tower:
             ec = (EF_BW + EF_HO) / 2
             st = zf - (0.12 if zf == Z0 else 0.10)
             t.cbox(ec - e(0.40), ec + e(0.40), D_MID - 0.005, D_PW + 0.01, st, zf + DOOR_H)  # D7 door
-            t.cbox(E_HOI - 0.006, E_HO + 0.006, *D_D1, zf, zf + 2.07)                        # D1 door
-        t.cbox(E_SPU - 0.006, E_SPL + 0.006, *D_D1, Z1, Z1 + 2.07)                          # D2 door
+            t.cbox(E_HOI - 0.006, E_HO + 0.006, *D_D1, zf - SILL_T, zf + 2.07)               # D1 door + sill
+        t.cbox(E_SPU - 0.006, E_SPL + 0.006, *D_D1, Z1 - SILL_T, Z1 + 2.07)                 # D2 door + sill
         # registered openings: my own French doors D4, joinery pockets, trim seats
         for r in recs:
             if r.get('own'):
@@ -450,13 +579,32 @@ class _Tower:
             for u0, u1, z0, z1, d0, d1 in _pockets(r):
                 I.face_box(t.cut, r, u0, u1, z0, z1, d0, d1)
         t.trim_seats(recs)
-        # reveals of the stair windows (frame flush with the outer face): plaster
         for r in recs:
-            if J.classify(r) == 'K':
-                u0, u1, z0, z1 = J.dims(r)
-                c0, c1 = r['coord'] - r['out'] * 0.005, r['coord'] - r['out'] * 0.40
-                xs_ = sorted((c0, c1))
-                t.zones.append((xs_[0], xs_[1], u0 - 0.005, u1 + 0.005, z0 - 0.005, z1 + 0.005))
+            kind = J.classify(r)
+            if kind is None or r['kind'] != 'rect':
+                continue
+            sp = J.spec_for(kind)
+            u0, u1, z0, z1 = J.dims(r)
+            zf = J.floor_of(z0)
+            maz, d_in = J.MAZ, J.FINISH + 0.05
+            if kind == 'K':
+                # reveals of the stair windows (frame flush with the outer face): plaster
+                t.fzone(r, u0 - 0.005, u1 + 0.005, z0 - 0.005, z1 + 0.005, 0.005, 0.40)
+            if sp['jamb'] == 'stop':
+                # frame pocket behind the stop: its jambs and head show 1 cm beside the frame
+                t.fzone(r, u0 - maz, u1 + maz, z0, z1 + maz, J.STOP, d_in)
+            if sp['niche']:
+                # radiator niche (pocket sunk by PARQ_T, _pockets): jambs plastered (paint)
+                t.fzone(r, u0 - maz, u1 + maz, zf - PARQ_T, z0 - 0.13, J.STOP, d_in)
+
+    def fzone(self, r, u0, u1, z0, z1, d0, d1):
+        """Paint zone over a box in an opening's face frame (joinery.Frame3)."""
+        c0, c1 = sorted((r['coord'] - r['out'] * d0, r['coord'] - r['out'] * d1))
+        a0, a1 = sorted((u0, u1))
+        if r['axis'] == 'x':
+            self.zones.append((c0, c1, a0, a1, z0, z1))
+        else:
+            self.zones.append((a0, a1, c0, c1, z0, z1))
 
     def trim_seats(self, recs):
         """The exterior's concrete head bands (5 cm into the brick), the L3 band
@@ -483,9 +631,12 @@ class _Tower:
     # -------------------------------------------------------------- records
     def records(self):
         recs = [r for r in I.openings_of(self.body.name)]
+        own_handles = {'F': 'FT', 'E': 'ET', 'E1': 'E1T'}
         for r in recs:
             if J.classify(r) == 'PT':
                 r['type'] = 'PTE'
+            elif J.classify(r) in own_handles:
+                r['type'] = own_handles[J.classify(r)]
         own = []
         # D4: French doors porch / loggia -> living room (N) and bedroom (S), SE 53 D 77,5 x 225
         w, ec = 0.775, 1.45
@@ -513,15 +664,15 @@ class _Tower:
     def holes(self, recs, axis, coord, depth=0.65):
         """Lining holes (local a, z) of the registered openings whose wall
         face lies within `depth` of the lining face (axis 'x': world x =
-        coord, a = dY; axis 'y': world y = coord, a = E)."""
+        coord, a = dY; axis 'y': world y = coord, a = E): what the joinery
+        puts through the lining plane (_lining_rects)."""
         out = []
         for r in recs:
-            if r['axis'] != axis or J.classify(r) is None:
+            if r['axis'] != axis:
                 continue
             if not (-0.05 <= (r['coord'] - coord) * r['out'] <= depth):
                 continue
-            rects = [J.dims(r)] + [(p[0], p[1], p[2], p[3]) for p in J.pockets(r)]
-            for u0, u1, z0, z1 in rects:
+            for u0, u1, z0, z1 in _lining_rects(r):
                 if axis == 'x':
                     a0, a1 = sorted((self.d_of(u0), self.d_of(u1)))
                 else:
@@ -535,29 +686,93 @@ class _Tower:
         sgn * E, extent dY a0 -> a1) or 'D' (face at dY = c, toward sgn * dY,
         extent E a0 -> a1), from z0 up to `top`: a level or a plane z(x, y)
         (sloping ceilings: each layer ends exactly on it). Holes (a0, a1, z0,
-        z1) are left open."""
+        z1) are left open: each layer is one solid with real holes per piece
+        of wall (_faces, _layer_shell); under a sloping top the solid stops on
+        a level just below it and one prism per layer carries the slope."""
         lo, hi = sorted((a0, a1))
-        ftop = top if callable(top) else (lambda x, y, v=top: v)
-        cuts = sorted({lo, hi} | {v for h in holes for v in h[:2] if lo + 1e-6 < v < hi - 1e-6})
+        T = sum(t for _, _, t in layers)
+        hs = [(max(h0, lo), min(h1, hi), h2, h3) for h0, h1, h2, h3 in holes
+              if min(h1, hi) - max(h0, lo) > 1e-6 and h3 > z0 + 1e-6]
+        if not callable(top):
+            segs = [(lo, hi, top, None)]
+        else:
+            def zmin(ua, ub):
+                return min(top(x, y) for x, y in self._layer_rect(axis, c, sgn, 0.0, T, ua, ub))
+            zg = zmin(lo, hi) - 0.03
+            cuts = sorted({lo, hi} | {v for h in hs if h[3] > zg - 1e-6 for v in h[:2]})
+            segs = []
+            for ua, ub in zip(cuts[:-1], cuts[1:]):
+                if ub - ua < 1e-6:
+                    continue
+                zc = zmin(ua, ub)
+                zb = zc - 0.03
+                tall = [h[3] for h in hs if h[0] < ub - 1e-6 and h[1] > ua + 1e-6 and h[3] > zb]
+                if tall:
+                    zb = max(tall)
+                segs.append((ua, ub, zb, top if zc - zb > 1e-3 else None))
         d = 0.0
         for elem, mat, t in layers:
             if mat is not None:
                 bm = self.kit(prefix + elem, mat)
-                for ua, ub in zip(cuts[:-1], cuts[1:]):
-                    poly = self._layer_rect(axis, c, sgn, d, d + t, ua, ub)
-                    zs = [ftop(x, y) for x, y in poly]
-                    zc = min(zs)
-                    for pa, pb, za, zb in _rect_minus(ua, ub, z0, zc, holes):
-                        I.prism(bm, self._layer_rect(axis, c, sgn, d, d + t, pa, pb), za, zb)
-                    if max(zs) - zc > 1e-5:
-                        I.prism(bm, poly, zc, ftop)
+                n0 = len(bm.faces)
+                for ua, ub, zb, ftop in segs:
+                    for outer, inner in _faces(ua, ub, z0, zb, hs):
+                        if not inner and len(outer) == 4:
+                            (pa, za), (pb, zz) = min(outer), max(outer)
+                            I.prism(bm, self._layer_rect(axis, c, sgn, d, d + t, pa, pb), za, zz)
+                        else:
+                            self._layer_shell(bm, axis, c, sgn, d, d + t, outer, inner)
+                    if ftop is not None:
+                        I.prism(bm, self._layer_rect(axis, c, sgn, d, d + t, ua, ub), zb, ftop)
+                self._mark_edges(prefix + elem, mat, bm, n0, axis)
             d += t
         return d
+
+    def _mark_edges(self, elem, mat, bm, n0, axis):
+        """Side faces (hole reveals, ends, top, bottom) of the adhesive and
+        insulation layers of a lining get material slot 1 = M_PlasterInt:
+        the plaster / board return that wraps the lining's edges at the
+        openings and wall ends (layers.md W1), drawn without thickness. Kit
+        objects carry one material, so build() adds the slot after flush."""
+        if mat == 'M_PlasterInt':
+            return
+        bm.faces.ensure_lookup_table()
+        k = 0 if axis == 'E' else 1                  # wall normal: world x ('E' faces) or y ('D' faces)
+        for i in range(n0, len(bm.faces)):
+            f = bm.faces[i]
+            f.normal_update()
+            if abs(f.normal[k]) < 0.5:
+                f.material_index = 1
+        self.edged.add(self.kit.name(elem))
 
     def _layer_rect(self, axis, c, sgn, d0, d1, a0, a1):
         if axis == 'E':
             return I.rect(xE(c + sgn * e(d0)), xE(c + sgn * e(d1)), self.y(a0), self.y(a1))
         return I.rect(xE(a0), xE(a1), self.y(c + sgn * d0), self.y(c + sgn * d1))
+
+    def _layer_shell(self, bm, axis, c, sgn, d0, d1, outer, inners):
+        """One layer slab of an (a, z) outline with holes on a face: both caps
+        triangulated (_fill), the outline and the holes walled."""
+        loops = [outer] + list(inners)
+        flat = [p for lp in loops for p in lp]
+        tris = _fill(loops)
+
+        def w(a, z, d):
+            if axis == 'E':
+                return (xE(c + sgn * e(d)), self.y(a), z)
+            return (xE(a), self.y(c + sgn * d), z)
+        vf = [bm.verts.new(w(a, z, d0)) for a, z in flat]
+        vb = [bm.verts.new(w(a, z, d1)) for a, z in flat]
+        for i, j, k in tris:
+            bm.faces.new((vf[i], vf[j], vf[k]))
+            bm.faces.new((vb[k], vb[j], vb[i]))
+        o = 0
+        for lp in loops:
+            n = len(lp)
+            for k in range(n):
+                i, j = o + k, o + (k + 1) % n
+                bm.faces.new((vf[j], vf[i], vb[i], vb[j]))
+            o += n
 
     def _layer_poly(self, bm, axis, c, sgn, d0, d1, poly_az):
         """One layer slab of an (a, z) polygon on a face."""
@@ -582,7 +797,10 @@ class _Tower:
         d = 0.0
         for elem, mat, t in layers:
             if mat is not None:
-                self._layer_poly(self.kit(prefix + elem, mat), axis, c, sgn, d, d + t, poly_az)
+                bm = self.kit(prefix + elem, mat)
+                n0 = len(bm.faces)
+                self._layer_poly(bm, axis, c, sgn, d, d + t, poly_az)
+                self._mark_edges(prefix + elem, mat, bm, n0, axis)
             d += t
 
     # -------------------------------------------------------------- floors
@@ -608,24 +826,65 @@ class _Tower:
         self.roofs()
         self.hall_stair()
         self.private_stairs()
+        self.stairwell_finishes()
+        self.entrance_sills()
+        # the 60 x 60 stair windows have steel frames and sashes (n3): own objects, as a Kit
+        # object keeps the material of the first opening that names it (cream M_Joinery)
+        J.build_openings(self.kit, [r for r in recs if J.classify(r) == 'K'], prefix='StairWindow')
         J.build_openings(self.kit, recs)
-        return self.kit.flush()
+        self.window_handles(recs)
+        self.niche_finishes(recs)
+        objs = self.kit.flush()
+        plaster = self.ctx.mats['M_PlasterInt']
+        # private flights: plastered RC (risers, stringers, ends) under the oak treads
+        o = objs.get(self.kit.name('StairStructure'))
+        if o is not None:
+            for p in o.data.polygons:
+                if abs(p.normal.z) < 0.5:
+                    p.material_index = 1
+            self.edged.add(o.name)
+        for name in self.edged:
+            o = objs.get(name)
+            if o is not None and any(p.material_index == 1 for p in o.data.polygons):
+                o.data.materials.append(plaster)
+        return objs
 
     # -------------------------------------------------------------- paint
-    def paint(self, tol=0.003):
+    def paint(self, tol=0.003, probe=0.01, share=0.5):
+        """M_PlasterInt on the body faces of the dwellings: a polygon is
+        painted when at least `share` of its area faces into a paint zone -
+        each triangle's centroid moved `probe` along the face normal (into
+        the room for a cavity face, into the open air for an exterior one)
+        must lie in a zone. Testing the polygon centre alone painted the
+        exterior face brick of towers E0 / W0: there the hollowing merged the
+        interior stub under the lean-to (dY -2.105) with the face brick above
+        the lean-to into one polygon whose centre lay in the bedroom zone."""
         mat = self.ctx.mats['M_PlasterInt']
         me = self.body.data
         if mat.name not in [m.name for m in me.materials if m]:
             me.materials.append(mat)
         idx = [m.name if m else None for m in me.materials].index(mat.name)
-        for poly in me.polygons:
-            c = poly.center
+
+        def inside(p):
             for x0, x1, y0, y1, z0, top in self.zones:
-                if x0 - tol <= c.x <= x1 + tol and y0 - tol <= c.y <= y1 + tol and c.z >= z0 - tol:
-                    zt = top(c.x, c.y) if callable(top) else top
-                    if c.z <= zt + tol:
-                        poly.material_index = idx
-                        break
+                if x0 - tol <= p.x <= x1 + tol and y0 - tol <= p.y <= y1 + tol and p.z >= z0 - tol:
+                    zt = top(p.x, p.y) if callable(top) else top
+                    if p.z <= zt + tol:
+                        return True
+            return False
+        me.calc_loop_triangles()
+        area_in, area = [0.0] * len(me.polygons), [0.0] * len(me.polygons)
+        vs = me.vertices
+        for tri in me.loop_triangles:
+            k = tri.polygon_index
+            a, b, c = (vs[i].co for i in tri.vertices)
+            area[k] += tri.area
+            if inside((a + b + c) / 3 + me.polygons[k].normal * probe):
+                area_in[k] += tri.area
+        for poly in me.polygons:
+            k = poly.index
+            if area[k] > 0 and area_in[k] >= share * area[k]:
+                poly.material_index = idx
 
     # -------------------------------------------------------------- floors
     def floors(self):
@@ -673,19 +932,20 @@ class _Tower:
         t.slab(E_SPL, E_IW, -D_L2W, D_HIT1, RAW[1])
         I.prism(t.kit('FloorScreed', 'M_Screed'), t.R(EF_SPD, EF_IW, D_VF, D_HIT1), RAW[1] + SLAB_T, Z1 - FL_TREAD)
         t.floor(EF_SPD, EF_IW, -D_L2W + PL, D_VF, Z1, FIN_OPEN)
-        t.ceiling(EF_SPL, EF_IWH, -D_MID, D_HIT1, RAW[1])
+        t.ceiling(E_SPL, E_IW, -D_MID, D_HIT1, RAW[1])                                 # over the wall plaster too
         t.ceiling(EF_SPD, EF_IW, -D_L2W + PL, D_VF, RAW[2])                             # vestibule ceiling
         # ---------------- L2
         for s in (-1, 1):
             def D(a, b):
                 return (s * a, s * b) if s > 0 else (s * b, s * a)
             t.slab(E_OW, E_IW, *D(D_PW, D_ENDI), RAW[2])
-            t.floor(EF_OW, E_HW, *D(DF_PW, DF_END), Z2, FIN_INT)                        # bedrooms N / S
-            t.ceiling(EF_OW, E_HW, *D(DF_PW, DF_END), RAW[3])
+            t.floor(EF_OW, E_HW, *D(DF_PW2, DF_END), Z2, FIN_INT)                       # bedrooms N / S
+            t.ceiling(EF_OW, E_HW, *D(DF_PW2, DF_END), RAW[3])
         t.slab(E_SBI, E_IW, -D_L2W, D_VF, RAW[2])
-        t.slab(E_SBI, EF_SPD, D_VF, D_L2W, RAW[2])
+        t.slab(E_SBI, EF_SPW, D_VF, D_L2W, RAW[2])                                    # well: spine side plastered
         t.slab(E_HW, E_IW, -D_PW, -D_L2W, RAW[2])
-        t.slab(E_HW, EF_SPD, D_L2W, D_PW, RAW[2])
+        t.slab(E_HW, EF_SPW, D_L2W, D_VT, RAW[2])
+        t.slab(E_HW, EF_SPD, D_VT, D_PW, RAW[2])
         t.slab(EF_SPD, E_IW, D_VT, D_PW, RAW[2])
         t.floor(EF_SB, E_HW, -D_L2W + PL, D_L2W - PL, Z2, FIN_OPEN)                    # middle bedroom
         # bathroom N, hall (pavilion parts F1, middle F2), stairwell open
@@ -694,13 +954,13 @@ class _Tower:
         t.floor(E_P2 + e(SJ), E_P2 + e(SJ + 0.75), D_BATH2[0], D_BATH2[1], Z2, FIN_INT)        # D13 doorway
         t.floor(E_P2, EF_IW, D_BATH2[1], -D_L2W, Z2, FIN_INT)
         t.floor(E_P2, EF_IW, -D_L2W, D_VF, Z2, FIN_OPEN)
-        t.floor(E_P2, EF_SPD, D_VF, D_L2W, Z2, FIN_OPEN)
-        t.floor(E_P2, EF_SPD, D_L2W, D_VT, Z2, FIN_INT)
+        t.floor(E_P2, EF_SPW, D_VF, D_L2W, Z2, FIN_OPEN)
+        t.floor(E_P2, EF_SPW, D_L2W, D_VT, Z2, FIN_INT)
         t.floor(E_P2, EF_IW, D_VT, DF_END, Z2, FIN_INT)
         # L2 hall ceilings (under the L3 slab; the N downstand is the painted body)
         t.ceiling(E_P2, EF_IW, D_BATH2[1], -D_PW, RAW[3])
         t.ceiling(E_P2, EF_IW, -D_MID, D_VF, RAW[3])
-        t.ceiling(E_P2, EF_SPD, D_VF, D_VT, RAW[3])
+        t.ceiling(E_P2, EF_SPW, D_VF, D_VT, RAW[3])
         t.ceiling(E_P2, EF_IW, D_VT, DF_END, RAW[3])
         # ---------------- L3
         for s in (-1, 1):
@@ -717,12 +977,13 @@ class _Tower:
         t.floor(E_P2 + e(SJ), E_P2 + e(SJ + 0.75), D_SHOW3[0], D_SHOW3[1], Z3, FIN_INT)        # D16 doorway
         t.floor(E_HW, E_P2, 3.055 - 0.375, 3.055 + 0.375, Z3, FIN_INT)                 # D15 doorway
         t.slab(E_HWI, E_IW, -D_MID, D_VF, RAW[3])
-        t.slab(E_HWI, EF_SPD, D_VF, D_MID, RAW[3])
+        t.slab(E_HWI, EF_SPW, D_VF, D_MID, RAW[3])
         t.slab(E_P2, E_IW, -D_PW, -D_MID, RAW[3])
-        t.slab(E_P2, EF_SPD, D_MID, D_PW, RAW[3])
+        t.slab(E_P2, EF_SPW, D_MID, D_VT, RAW[3])
+        t.slab(E_P2, EF_SPD, D_VT, D_PW, RAW[3])
         t.slab(EF_SPD, E_IW, D_VT, D_PW, RAW[3])
         t.floor(E_P2, EF_IW, -DF_PW, D_VF, Z3, FIN_INT)                                # hall
-        t.floor(E_P2, EF_SPD, D_VF, D_VT, Z3, FIN_INT)
+        t.floor(E_P2, EF_SPW, D_VF, D_VT, Z3, FIN_INT)
         t.floor(E_P2, EF_IW, D_VT, D_SHOW3[0], Z3, FIN_INT)
 
     # -------------------------------------------------------------- walls
@@ -748,7 +1009,7 @@ class _Tower:
             # corridor: back wall and stair-hall wall lined, plaster at the S end
             hb = t.holes(recs, 'x', xE(E_BW))
             t.face_layers('Wall', B.LINING, 'E', E_BWI, 1, -D_MID, D_MID, st, top, hb)
-            h1 = [(D_D1[0], D_D1[1], zf, zf + 2.07)]
+            h1 = [(D_D1[0], D_D1[1], zf - SILL_T, zf + 2.07)]
             t.face_layers('Wall', B.LINING, 'E', E_HOI, -1, -D_MID, D_MID, st, top, h1)
             ec = (EF_BW + EF_HO) / 2
             t.face_layers('Wall', PLASTER, 'D', D_MID, -1, EF_BW, EF_HO, st, top,
@@ -775,7 +1036,7 @@ class _Tower:
         t.face_layers('Wall', B.LINING, 'E', E_IW, -1, -D_L2W, D_VF, st1, RAW[2],
                       [h for h in hk if h[2] > Z1 and h[3] < Z2])
         t.face_layers('Wall', SPINE_DUP, 'E', E_SPL, 1, -D_L2W, D_VF, st1, RAW[2],
-                      [(D_D1[0], D_D1[1], Z1, Z1 + 2.07)])
+                      [(D_D1[0], D_D1[1], Z1 - SILL_T, Z1 + 2.07)])
         t.face_layers('Wall', PLASTER, 'D', -D_L2W, 1, EF_SPD, EF_IW, st1, RAW[2])
         up = [(D_VF, st1), (D_HIT1, st1)] + [(d, SOFF1(d)) for d in (D_HIT1, D_VT)] + [(D_VT, RAW[2]), (D_VF, RAW[2])]
         t.face_poly('Wall', B.LINING, 'E', E_IW, -1, up)
@@ -808,7 +1069,7 @@ class _Tower:
             ha = [h for h in t.holes(recs, 'x', xo) if D(D_PW, D_ENDI)[0] - 0.01 <= h[0] <= D(D_PW, D_ENDI)[1]]
             t.face_layers('Wall', B.LINING, 'E', E_OW, 1, *D(D_PW, D_ENDI), st2, RAW[3], ha)
             t.face_layers('Wall', B.LINING, 'D', s * D_ENDI, -s, EF_OW, EF_IW, st2, RAW[3])
-            t.face_layers('Wall', B.LINING, 'D', s * D_PW, s, EF_OW, E_HW, st2, RAW[3])
+            t.face_layers('Wall', PLASTER, 'D', s * D_PW, s, EF_OW, E_HW, st2, RAW[3])    # 25 + plaster (n28)
             # middle bedroom: plaster on the 25 walls, under the lean-to ceiling
             I.prism(t.kit('WallPlaster', 'M_PlasterInt'), t.R(EF_SB, E_HW, s * D_L2W, s * (D_L2W - PL)), st2,
                     lambda x, y: t.lean_ceil(x))
@@ -847,13 +1108,13 @@ class _Tower:
                       PART_STD, 'Partition')
                 # D8: hinge on the north jamb into the kitchen; D9: hinge north, into the bathroom
                 room = t.p(3.4, (d_a + d_b) / 2)
-                hinge, swing = _door_cfg(a, b, dc - 0.375, room)
+                hinge, swing = _door_cfg(a, b, dc - 0.375, dc, room)
                 I.door(kit, a, b, dc, 0.75, zf + DOOR_H, zf, dt_std, hinge, swing, 90.0)
             # D7: corridor -> bedroom, hinge on the inner jamb, into the bedroom
             dw = (D_MID - PL + DF_PW) / 2
             a, b = t.p(EF_BW, dw), t.p(EF_HO, dw)
             L = (EF_HO - EF_BW) * M
-            hinge, swing = _door_cfg(a, b, L / 2 + 0.40, t.p(2.3, 3.5))
+            hinge, swing = _door_cfg(a, b, L / 2 + 0.40, L / 2, t.p(2.3, 3.5))
             I.door(kit, a, b, L / 2, 0.80, zf + DOOR_H, zf, DF_PW - (D_MID - PL) - 0.002, hinge, swing, 90.0)
         # ---------------- L2: long partition E 2.86 -> 2.951 (bedrooms | hall), bathroom partition
         ep = (E_HW + E_P2) / 2
@@ -869,14 +1130,14 @@ class _Tower:
         _wall(kit, a, b, _notched(L, st, tops, notch), PART_WET, 'Partition')
         for c, jamb, droom, w in doors:
             sh = sL(c) + (w / 2 if jamb == 'b' else -w / 2)
-            hinge, swing = _door_cfg(a, b, sh, t.p(1.5, droom))
+            hinge, swing = _door_cfg(a, b, sh, sL(c), t.p(1.5, droom))
             I.door(kit, a, b, sL(c), w, Z2 + DOOR_H, Z2, dt_wet, hinge, swing, 90.0)
             t.floor(E_HW, E_P2, c - w / 2, c + w / 2, Z2, FIN_INT if abs(c) > D_L2W else FIN_OPEN)
         db = (D_BATH2[0] + D_BATH2[1]) / 2
         a, b = t.p(E_P2, db), t.p(EF_IW, db)
         L = (EF_IW - E_P2) * M
         _wall(kit, a, b, _notched(L, st, [(0, top), (L, top)], [(SJ, SJ + 0.75, Z2 + DOOR_H)]), PART_STD, 'Partition')
-        hinge, swing = _door_cfg(a, b, SJ, t.p(3.4, -4.5))
+        hinge, swing = _door_cfg(a, b, SJ, SJ + 0.375, t.p(3.4, -4.5))
         I.door(kit, a, b, SJ + 0.375, 0.75, Z2 + DOOR_H, Z2, dt_std, hinge, swing, 90.0)
         # ---------------- L3: kitchen partition (under the sloping ceiling), shower-room partition
         f = t.roof_ceil(1)
@@ -887,14 +1148,14 @@ class _Tower:
         tops = [(0, f(xm, t.y(D_PW))), (L, f(xm, t.y(DF_END)))]
         dc = 3.055 - D_PW
         _wall(kit, a, b, _notched(L, st, tops, [(dc - 0.375, dc + 0.375, Z3 + DOOR_H)]), PART_WET, 'Partition')
-        hinge, swing = _door_cfg(a, b, dc - 0.375, t.p(2.0, 4.0))
+        hinge, swing = _door_cfg(a, b, dc - 0.375, dc, t.p(2.0, 4.0))
         I.door(kit, a, b, dc, 0.75, Z3 + DOOR_H, Z3, dt_wet, hinge, swing, 90.0)
         ds = (D_SHOW3[0] + D_SHOW3[1]) / 2
         a, b = t.p(E_P2, ds), t.p(EF_IW, ds)
         L = (EF_IW - E_P2) * M
         zt = f(xE(EF_IW), t.y(ds))
         _wall(kit, a, b, _notched(L, st, [(0, zt), (L, zt)], [(SJ, SJ + 0.75, Z3 + DOOR_H)]), PART_STD, 'Partition')
-        hinge, swing = _door_cfg(a, b, SJ, t.p(3.4, 4.5))
+        hinge, swing = _door_cfg(a, b, SJ, SJ + 0.375, t.p(3.4, 4.5))
         I.door(kit, a, b, SJ + 0.375, 0.75, Z3 + DOOR_H, Z3, dt_std, hinge, swing, 90.0)
 
     # -------------------------------------------------------------- roofs
@@ -957,6 +1218,88 @@ class _Tower:
         I.handrail(kit, [(xr2, t.y(D_HL + STEP_LAP), 11 * r), (xr2, t.y(D_L1L + g), 16 * r)], height=0.92,
                    rail_d=0.04, posts=False, prefix='HallStair')
 
+    # -------------------------------------------------------------- stairwell
+    def stairwell_finishes(self):
+        """Plaster on the edges of the L2 and L3 floor openings over the
+        private flights (E 3.462 -> 3.957 x dY -0.905 -> +2.385) and under
+        the L2 -> L3 flight, which is seen from the duplex (the L1 -> L2
+        flight over the common hall has UNDER_FLIGHT): spine side flush with
+        the spine plaster (the slabs stop EF_SPW), north edges in front of
+        the slab, the top risers (slab edge over the last tread) and the
+        flight's top end hanging under the L3 slab."""
+        t = self
+        bm = t.kit('StairwellPlaster', 'M_PlasterInt')
+        r1, r2 = (Z2 - Z1) / FL_N, (Z3 - Z2) / FL_N
+        zt2 = Z2 - FL_TREAD                                  # underside of the L2 -> L3 flight's foot
+        I.prism(bm, t.R(EF_SPW, EF_SPD, D_VF, D_VT), RAW[2], Z2)
+        I.prism(bm, t.R(EF_SPW, EF_SPD, D_VF, D_VT), RAW[3] - CPL, Z3)
+        I.prism(bm, t.R(EF_SPD, EF_IW, D_VF, D_VF + PL), RAW[2] - CPL, zt2 - FPL)
+        I.prism(bm, t.R(EF_SPD, EF_IW, D_VF, D_VF + PL), RAW[3] - CPL, Z3)
+        I.prism(bm, t.R(EF_SPD, EF_IW, D_VT - PL, D_VT), Z2 - r1, Z2)
+        I.prism(bm, t.R(EF_SPD, EF_IW, D_VT - PL, D_VT), Z3 - r2, Z3)
+        pts = [(D_VF, zt2), (D_HIT2, zt2), (D_VT, Z_SOFTOP2)]
+        prof = [(t.y(d), z) for d, z in pts] + [(t.y(d), z - FPL) for d, z in reversed(pts)]
+        geo.add_prism_x(bm, prof, xE(EF_IW), xE(EF_SPD))
+        I.prism(bm, t.R(EF_SPD, EF_IW, D_VT, D_VT + PL), Z_SOFTOP2 - FPL, RAW[3] - CPL)
+
+    # -------------------------------------------------------------- window handles
+    def window_handles(self, recs):
+        """Handles of the casement windows 'FT', 'ET', 'E1T' (_register_types):
+        the joinery's handle (SE 51 lever on a rose) at the sash's mid-height,
+        on the meeting stiles of a pair of casements or on the opening stile
+        of a single sash. Sash outline as joinery.opening builds it: behind a
+        stop jamb the frame laps the brick, so the sashes fill the opening
+        above the frame's bottom member; a plain jamb frames inside it."""
+        bm = self.kit('WindowHandles', 'M_Steel')
+        for r in recs:
+            kind = J.classify(r)
+            if kind not in ('FT', 'ET', 'E1T') or r['kind'] != 'rect':
+                continue
+            sp = J.spec_for(kind)
+            fw, fd = sp['frame']
+            sw, sd = sp['sash']
+            u0, u1, z0, z1 = J.dims(r)
+            if sp['jamb'] == 'stop':
+                d0, iu0, iu1, iz0, iz1 = J.STOP, u0, u1, z0 + fw, z1
+            else:
+                d0, iu0, iu1, iz0, iz1 = J.WALL, u0 + fw, u1 - fw, z0 + fw, z1 - fw
+            if sp.get('frame_at') is not None:
+                d0 = sp['frame_at']
+            ds = d0 + (fd - sd) / 2
+            uh = (iu0 + iu1) / 2 if sp['leaves'] == 2 else iu1 - sw / 2
+            zh = (iz0 + iz1) / 2
+            I.face_box(bm, r, uh - 0.012, uh + 0.012, zh - 0.07, zh + 0.07, ds + sd, ds + sd + 0.012)
+            I.face_box(bm, r, uh - 0.012, uh + 0.012, zh - 0.10, zh + 0.012, ds + sd + 0.012, ds + sd + 0.06)
+
+    # -------------------------------------------------------------- radiator niches
+    def niche_finishes(self, recs):
+        """Radiator niches under the type E windows (SE 53 E): the joinery
+        lines the back (NicheLining, standing on zf); here the parquet runs
+        into the niche, under that lining (the pocket is sunk by the parquet,
+        _pockets), and a plaster soffit covers the RC sill block and the
+        lining's cut edge. The jambs are the painted brick (paint zones) and
+        the lining's plastered edges."""
+        for r in recs:
+            kind = J.classify(r)
+            if kind is None or r['kind'] != 'rect' or not J.spec_for(kind)['niche']:
+                continue
+            u0, u1, z0, z1 = J.dims(r)
+            zf = J.floor_of(z0)
+            a0, a1 = u0 - J.MAZ, u1 + J.MAZ
+            I.face_box(self.kit('FloorParquet', 'M_Parquet'), r, a0, a1, zf - PARQ_T, zf, J.STOP, J.FINISH)
+            I.face_box(self.kit('NicheLining', 'M_PlasterInt'), r, a0, a1, z0 - 0.13 - PL, z0 - 0.13,
+                       J.STOP + J.LIN, J.FINISH)
+
+    # -------------------------------------------------------------- entrance sills
+    def entrance_sills(self):
+        """Stone sills (soglie) under the dwelling entrance doors D1 (type A,
+        L0 and L1, stair-hall outer wall) and D2 (duplex, L1, spine): from the
+        hall face to the dwelling's finished face, flush with both floors."""
+        bm = self.kit('EntranceSills', 'M_Stone')
+        for zf in (Z0, Z1):
+            I.prism(bm, self.R(E_HO, EF_HO, *D_D1), zf - SILL_T, zf)
+        I.prism(bm, self.R(E_SPU, EF_SPD, *D_D1), Z1 - SILL_T, Z1)
+
     # -------------------------------------------------------------- private stairs
     def private_stairs(self):
         t, kit = self, self.kit
@@ -965,7 +1308,7 @@ class _Tower:
             # 14 risers and a top tread (the 15th riser is the upper floor's edge): interior.flight's
             # profile with the last riser at its top end would fold back on itself
             I.flight(kit, t.p(EF_SPD, D_VF), (0.0, -1.0), width, FL_N - 1, riser, FL_GOING, zf, waist=FL_WAIST,
-                     tread_t=FL_TREAD, nosing=FL_NOSE, side=-1, tread_top_last=True)
+                     tread_t=FL_TREAD, nosing=FL_NOSE, side=-1, tread_top_last=True, tread_mat=TREAD_MAT)
         # under the L1 -> L2 flight (common hall below): insulation and plaster (SE 58 "ISOLAZIONE")
         pts = [D_HIT1, D_MID]
         dz = 0.0

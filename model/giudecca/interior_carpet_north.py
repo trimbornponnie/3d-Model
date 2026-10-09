@@ -21,10 +21,18 @@ L2 -> L3 superimposed against the axis wall (dE 0.105 -> 0.88), rising south.
 Walls: the exterior masonry stays in the bodies (W1 0.395, core W2 0.28,
 end walls 0.37 as the exterior's hollows, joint leaves 0.185) and gets the
 insulated lining (55) on its warm faces; the axis and party walls (W5 0.21),
-the core spine (0.21, RC) and the partitions (W7 0.11 / 0.15) are separate
-layered objects; floors F1 / F2 per room on one structural slab per storey;
-roofs R1 under the exterior's tile plane, the core vault R2 under its copper
-skin, terraces R3 (9.15), the gallery deck R4 (2.99).
+the core spine (0.21, RC) and the partitions (W7 0.11 / 0.15; the camera |
+hall + bath wall 0.16, dE 1.77 -> 1.93, so that the cameras are the written
+2.92 and the baths the verified 1.66 wide) are separate layered objects;
+floors F1 / F2 per room on one structural slab per storey; roofs R1 under
+the exterior's tile plane, the core vault R2 under its copper skin, terraces
+R3 (9.15), the gallery deck R4 (2.99).
+
+Joinery: joinery.build_openings, except the trifore, the two-light pairs and
+the finestre tipo, whose local builders (trifora_joinery, two_light_joinery,
+window_e) avoid the engine's coplanar / overlapping parts there; the plain
+reveals of the core windows and terrace doors and the radiator-niche jambs
+get plaster returns (reveal_finishes).
 
 Boundary with interior_carpet_ms (the middle row) - read before changing:
 * L1 (z 2.71 -> 5.72): this module hollows SouthPavN right to its south face
@@ -87,16 +95,20 @@ Y_BATH2 = 7.72                      # L2 bagno 1 south face; chase to the dividi
 Y_BATH2_CAMPO = 7.79                # the same in the campo houses (n78)
 Y_CAMPO_IN = CAMPO['l2_south'] - WM                      # 8.0006, campo L2 wall masonry face
 Y_CAMPO_PAR = CAMPO['l2_south'] - C.CAMPO_PARAPET_T / M  # 8.088, L3 terrace parapet inner face
-Y_OC_CAMPO = C.OCULUS_Y_CAMPO[0]                         # 8.1006, oculus panel north face (campo)
 Y_C2 = YNI1 + 0.055 / M             # camera-2 partition centre: north face on the pavilion wall face (n78)
 Y_C2S = YNI1 + 0.11 / M             # its south face
-Y_HB = {1: 5.89, 2: 5.95}           # hall | bath partitions (n67, n78)
+Y_HB = {1: 5.89, 2: 5.975}          # hall | bath partitions (n67 5.86/5.92; n78, n10 5.94-6.01, verified)
 T_HB = {1: 0.11, 2: 0.15}           # their thickness (W7; the L2 one carries the bath plumbing)
 Y_CLOSE = YS0 + 0.353 / M           # campo houses: L1 core closing wall to Y 4.99 (n31)
+Y_C0 = ROWS['N']['core'][1] - 0.05 - 0.002 / M   # its inner face: 2 mm before the exterior's corner
+                                    # piers (Y 4.726 -> 5.07, dE 1.70 -> 2.10, the '2' piers of n31)
 
 D_AX = 0.105                        # axis wall half thickness (W5 0.21, spine 0.21)
 D_CORE = CORE_W / 2 - 0.28          # 1.77: core wall masonry face (0.02 render + 0.26 brick)
-D_P0, D_P1 = D_CORE, D_CORE + 0.11  # camera | hall partition (n67 dE 1.82-1.93, aligned on the core wall)
+D_CORE_T = CORE_W / 2 - D_CORE      # 0.28 core wall masonry
+D_P0, D_P1 = D_CORE, 1.93          # camera | hall + bath wall: hall / bath face on the core wall's masonry
+                                    # line (bath 1.66 wide, verified 1.75-1.79 on four sheets), camera face
+                                    # 1.93 (camera '2,92' from the party wall face, n31, n67, n78)
 D_KIT = NOTCH_HALF + WALL           # 1.88: kitchen side, masonry face of the notch side wall
 D_BAND = 0.88                       # flight band | corridor (n31: flight 0.78 against the spine)
 D_ENT = C.UNDER_CORE                # 1.6975: the N-pav south wall opening under the core
@@ -121,7 +133,9 @@ FL_INT = BU.FLOOR_INT[:-1]          # parquet / screed / fill on the slab
 FL_OPEN = BU.FLOOR_OPEN[:-1]        # parquet / screed / insulation (over open air, cellars)
 PLASTER = [('Plaster', 'M_PlasterInt', PL)]
 ENT_WALL = [('EntranceBrick', 'M_Brick', 0.34 - LIN)] + BU.LINING   # outside -> in (SE 65: 26 + 5 + lining)
-CLOSE_WALL = BU.LINING + [('CoreWallBrick', 'M_Brick', 0.353 - LIN)]  # inside (north) -> out
+PART_CAM = [('Plaster', 'M_PlasterInt', 0.015), ('Core', 'M_HollowBrick', D_P1 - D_P0 - 0.030),
+            ('Plaster', 'M_PlasterInt', 0.015)]    # W7 with a 130 core: carries the bath plumbing and vent
+T_CAM = D_P1 - D_P0                 # 0.16
 
 
 # ------------------------------------------------------------ joinery types
@@ -130,6 +144,8 @@ def _register_types() -> None:
     edited): the portoncino in the 0.34 core wall with its own lintel (PN),
     the terrace door in the 0.30 L3 cross wall (DN)."""
     J.TYPES.setdefault('PN', dict(J.TYPES['P'], lintel=False))
+    J.TYPES.setdefault('N_E1P', dict(J.TYPES['E1'], lintel=False, board=False))   # a light of a two-light pair
+    J.TYPES.setdefault('N_E', dict(J.TYPES['E'], board=False))                   # finestra tipo, own sill / board
     J.TYPES.setdefault('DN', dict(jamb='plain', door=True, leaves=1, bottom_rail=0.150, board=False,
                                   lintel=False, niche=False, frame_at=0.115))
 
@@ -474,13 +490,155 @@ def _cut_openings(ctx, obj, recs, bm):
     obj.data.update()
 
 
-def _poly_z(pts, x):
-    """z on a polyline [(x, z), ...] (any order) at x."""
-    p = sorted(pts)
-    for (x0, z0), (x1, z1) in zip(p[:-1], p[1:]):
-        if x0 - 1e-9 <= x <= x1 + 1e-9:
-            return z0 + (z1 - z0) * (x - x0) / (x1 - x0) if x1 > x0 else z0
-    return p[0][1] if x < p[0][0] else p[-1][1]
+def trifora_joinery(kit, rec, prefix='Window'):
+    """joinery._trifora with the two posts on the light boundaries: there the
+    frame ring steps down from the side sills to the centre sill (its inner
+    face at +-0.46 from the centre below the side sills), and the engine's
+    casements, from +-0.52, ran into that step (coplanar faces, overlapping
+    solids). Here each post spans +-0.462 -> +-0.58 (0.118, centred on the
+    0.52 boundary, 2 mm off the step's inner face) and the two casements fill
+    +-0.458 (SE 51: fixed side lights, two casements in the centre)."""
+    s = J.spec_for('T')
+    fr = J.Frame3(rec)
+    d0 = J._frame_depth(rec, s)
+    fw, fd = s['frame']
+    sw, sd = s['sash']
+    fbm = kit(f'{prefix}Frames', s['frame_mat'])
+    lbm = kit(f'{prefix}Leaves', s['leaf_mat'])
+    gbm = kit(f'{prefix}Glass', s['glass_mat'])
+    inner = J._ring(fbm, fr, rec['outline'], fw, d0, d0 + fd)
+    u0, u1, z0, z1 = J.dims(rec)
+    uc = (u0 + u1) / 2
+    zs_side = min(z for u, z in rec['outline'] if abs(u - u0) < 1e-6)
+    pa, pb = 0.462, 0.58                       # post faces from the centre
+    for sg in (-1, 1):
+        ua, ub = sorted((uc + sg * pa, uc + sg * pb))
+        ztop = min(J._z_on(inner, ua), J._z_on(inner, ub)) + 0.02
+        J._box(fbm, fr, ua, ub, zs_side + fw - 0.02, ztop, d0 + 0.002, d0 + fd - 0.002)
+    for sg in (-1, 1):
+        lo = [(u, z) for u, z in inner if sg * (u - uc) >= pb - 1e-6]
+        cut = uc + sg * pb
+        if len(lo) >= 2:
+            poly = J._side_light(inner, uc, sg, cut, zs_side + fw)
+            if poly:
+                J._glass(gbm, fr, poly, d0 + fd / 2, s['glass'])
+    a, b = uc - 0.458, uc + 0.458
+    zc0 = min(p[1] for p in inner if abs(p[0] - uc) < 0.47)
+    ds = d0 + (fd - sd) / 2
+    for la, lb_ in ((a, uc), (uc, b)):
+        top = [(u, z) for u, z in inner if la - 1e-6 <= u <= lb_ + 1e-6 and z > zc0 + 0.5]
+        za, zb = J._z_on(inner, la), J._z_on(inner, lb_)
+        out = [(la, zc0), (lb_, zc0), (lb_, zb)] + sorted([q for q in top if la < q[0] < lb_],
+                                                          key=lambda q: -q[0]) + [(la, za)]
+        gl = I.offset(out, sw)
+        J._ring(lbm, fr, out, sw, ds, ds + sd)
+        J._glass(gbm, fr, gl, ds + sd / 2, s['glass'])
+    hb = kit(f'{prefix}Handles', 'M_Steel')
+    zh = J.floor_of(z0) + 1.05
+    J._box(hb, fr, uc - 0.012, uc + 0.012, zh - 0.07, zh + 0.07, ds + sd, ds + sd + 0.012)
+
+
+def two_light_pairs(recs):
+    """The two lights of each two-light window (carpet.two_light: two E1
+    records on one face, 0.14 brick mullion between them)."""
+    groups = {}
+    for r in recs:
+        if r.get('done') or J.classify(r) != 'E1':
+            continue
+        u0, u1, z0, z1 = J.dims(r)
+        groups.setdefault((r['axis'], round(r['coord'], 4), r['out'], round(z0, 3), round(z1, 3)), []).append(r)
+    pairs = []
+    for g in groups.values():
+        g.sort(key=lambda r: J.dims(r)[0])
+        i = 0
+        while i + 1 < len(g):
+            if abs(J.dims(g[i + 1])[0] - J.dims(g[i])[1] - C.MULLION) < 0.01:
+                pairs.append((g[i], g[i + 1]))
+                i += 2
+            else:
+                i += 1
+    return pairs
+
+
+def two_light_joinery(kit, ra, rb, prefix='Window'):
+    """Joinery of a two-light window: frames, casements and reveals per light
+    (engine), but one RC lintel, one inner sill block and one window board
+    over the pair. The engine builds them per light, and over the 0.14
+    mullion the lintel / sill ends of one light ran into the other light's
+    pocket (coplanar faces with its frame, reveal head and board)."""
+    for r in (ra, rb):
+        r['done'] = True
+        J.opening(kit, r, 'N_E1P', prefix)
+    s = J.spec_for('E1')
+    fr = J.Frame3(ra)
+    U0, z0, z1 = J.dims(ra)[0], J.dims(ra)[2], J.dims(ra)[3]
+    U1 = J.dims(rb)[1]
+    d0 = J._frame_depth(ra, s)
+    fd = s['frame'][1]
+    ST, MZ, W = J.STOP, J.MAZ, J.WALL
+    lb = kit('Lintels', 'M_Structure')
+    J._box(lb, fr, U0 - 0.12, U1 + 0.12, z1, z1 + 0.13, 0.05, ST)
+    J._box(lb, fr, U0 - 0.12, U1 + 0.12, z1 + MZ, z1 + 0.13, ST, W)
+    J._box(lb, fr, U0 - 0.12, U0 - MZ, z1, z1 + MZ, ST, W)
+    J._box(lb, fr, U1 + MZ, U1 + 0.12, z1, z1 + MZ, ST, W)
+    sill_and_board(kit, fr, U0, U1, z0, d0, fd, prefix)
+
+
+def sill_and_board(kit, fr, U0, U1, z0, d0, fd, prefix='Window'):
+    """Inner part of the RC sill and the timber window board over U0 -> U1
+    (stop-jamb windows, as joinery.opening), the sill block under the board
+    stopping at its underside: no coplanar tops."""
+    MZ, W = J.MAZ, J.WALL
+    sb = kit('SillBlocks', 'M_Concrete')
+    J._box(sb, fr, U0 - 0.12, U1 + 0.12, z0 - 0.13, z0, 0.115, d0)
+    J._box(sb, fr, U0 - 0.12, U0 - MZ - 0.02, z0 - 0.13, z0, d0, W)
+    J._box(sb, fr, U1 + MZ + 0.02, U1 + 0.12, z0 - 0.13, z0, d0, W)
+    J._box(sb, fr, U0 - MZ - 0.02, U1 + MZ + 0.02, z0 - 0.13, z0 - 0.025, d0, W)
+    wb = kit(f'{prefix}Boards', 'M_Joinery')
+    J._box(wb, fr, U0 - MZ - 0.02, U1 + MZ + 0.02, z0 - 0.025, z0, d0 + fd, J.FINISH + 0.02)
+
+
+def window_e(kit, r, prefix='Window'):
+    """A finestra tipo (E): engine joinery without its sill / board, then
+    sill_and_board."""
+    r['done'] = True
+    J.opening(kit, r, 'N_E', prefix)
+    s = J.spec_for('E')
+    u0, u1, z0, z1 = J.dims(r)
+    sill_and_board(kit, J.Frame3(r), u0, u1, z0, J._frame_depth(r, s), s['frame'][1], prefix)
+
+
+def reveal_finishes(kit, recs):
+    """Finishes the joinery engine leaves raw on this row's openings:
+    * plaster returns (15) on the inner reveals of the plain-jamb openings
+      whose frame sits forward in the wall - the core windows K (steel frame
+      at the outer face, layers.md W2: reveals lined, the 45 deg splay is not
+      modelled) and the L3 terrace doors DN - from the back of the frame to
+      the finished wall face (core wall 0.28 + lining, cross wall 0.30 +
+      lining);
+    * plaster on the side jambs of the radiator niches under the finestre
+      tipo (E), from the niche back lining to the finished face."""
+    bm = kit('WindowReveals', 'M_PlasterInt')
+    t = 0.015
+    for r in recs:
+        k = J.classify(r)
+        if k not in ('K', 'DN', 'E'):
+            continue
+        sp = J.spec_for(k)
+        u0, u1, z0, z1 = J.dims(r)
+        if k == 'E':
+            zf = J.floor_of(z0)
+            da, db = J.STOP + LIN, J.FINISH
+            for ua, ub in ((u0 - J.MAZ, u0 - J.MAZ + t), (u1 + J.MAZ - t, u1 + J.MAZ)):
+                I.face_box(bm, r, ua, ub, zf, z0 - 0.13, da, db)
+            continue
+        da = J._frame_depth(r, sp) + sp['frame'][1] + 0.002
+        db = (D_CORE_T if k == 'K' else (YX1 - YX0) * M) + LIN
+        I.face_box(bm, r, u0, u0 + t, z0, z1, da, db)                 # jambs
+        I.face_box(bm, r, u1 - t, u1, z0, z1, da, db)
+        I.face_box(bm, r, u0 + t, u1 - t, z1 - t, z1, da, db)         # head
+        if k == 'K':
+            I.face_box(bm, r, u0 + t, u1 - t, z0, z0 + t, da, db)     # sill
 
 
 def _move_z(o, z_from, z_to):
@@ -528,6 +686,7 @@ class Seg:
             self.cantine()
         if self.campo is not None:
             self.spav_campo()
+        self.spav_roof()
         for h in self.houses:
             h.build()
 
@@ -621,9 +780,19 @@ class Seg:
         for g0, g1 in C.notch_gaps(e0, e1, p.axes, half=D_KIT):
             R.cprism(body, ER(g0, g1, YSI0, YSI1), Z3 - SLAB - 0.01, roof_under('S'))
         for g0, g1 in C.notch_gaps(q0, q1, p.axes, half=D_KIT):
-            poly = ER(g0, g1, YSI0, YSI1)
-            I.prism(kit('FloorSlab', 'M_Structure'), poly, Z3 - SLAB, Z3 - 0.10)
-            I.sloped_stack(kit, poly, roof_under('S'), BU.ROOF_TILE_UNDER, prefix='Roof', slope=SLOPE_S)
+            I.prism(kit('FloorSlab', 'M_Structure'), ER(g0, g1, YSI0, YSI1), Z3 - SLAB, Z3 - 0.10)
+
+    def spav_roof(self):
+        """R1 under the south pavilion's tiles, kitchens between the notches;
+        one run over the normal and the campo part (no layer ends on the
+        abutment E 35.5 / 48.5, where the exterior's gutters end)."""
+        parts = [p for p in (self.normal, self.campo) if p is not None]
+        rs = [self.rng(p, 'poly') for p in parts]
+        q0, q1 = min(r[0] for r in rs), max(r[1] for r in rs)
+        axes = sorted(a for p in parts for a in p.axes)
+        for g0, g1 in C.notch_gaps(q0, q1, axes, half=D_KIT):
+            I.sloped_stack(self.kit, ER(g0, g1, YSI0, YSI1), roof_under('S'), BU.ROOF_TILE_UNDER, prefix='Roof',
+                           slope=SLOPE_S)
 
     def spav_party(self, E, y_end, l1=True, campo_side=None):
         kit = self.kit
@@ -649,7 +818,11 @@ class Seg:
         R.cEY(sp, e0, e1, YSI0, Y_BATH2_CAMPO, Z2 - 0.10, Z3 - SLAB)
         for g0, g1 in C.minus_ranges(e0, e1, [(a - D_CORE / M, a + D_CORE / M)]):
             R.cEY(sp, g0, g1, Y_BATH2_CAMPO - EPS, Y_CAMPO_IN, Z2 - 0.10, Z3 - SLAB)
-        I.prism(kit('FloorSlabExposed', 'M_Concrete'), ER(b0, b1, YSI0, Y_CAMPO_IN), Z2 - SLAB, Z2 - 0.10)
+        # 2 mm short of the abutment with the normal part: the exterior's campo
+        # band on the pier row ends on that line (no coplanar end faces)
+        c0 = b0 + (0.002 / M if p.k0 == 'campo' else 0.0)
+        c1 = b1 - (0.002 / M if p.k1 == 'campo' else 0.0)
+        I.prism(kit('FloorSlabExposed', 'M_Concrete'), ER(c0, c1, YSI0, Y_CAMPO_IN), Z2 - SLAB, Z2 - 0.10)
         self.spav_l3(sp, p)
         # terrace over the L2 extension (R3), outside the notch (the notch: House)
         notch = [(a - NOTCH_HALF / M, a + NOTCH_HALF / M)]
@@ -662,7 +835,8 @@ class Seg:
             if abs(E - p.E0) < 1e-6 or abs(E - p.E1) < 1e-6:
                 inward = 1 if abs(E - p.E0) < 1e-6 else -1     # toward the campo house (+E = -x)
                 half = [('Leaf', 'M_HollowBrick', 0.09), ('Plaster', 'M_PlasterInt', 0.015)]
-                A, B = (xE(E), yY(L2_SOUTH)), (xE(E), yY(Y_CAMPO_IN))
+                # from 2 mm inside the party wall's end (NorthPavM's end band is flush with Y 7.776)
+                A, B = (xE(E), yY(L2_SOUTH - 0.002 / M)), (xE(E), yY(Y_CAMPO_IN))
                 # A -> B runs south: its left is east (-E); the campo house lies right for inward > 0
                 lay = half if inward > 0 else list(reversed(half))
                 wall(kit, lay, A, B, Z2 - 0.10, SOFF[Z2], prefix='Sep', offset=-inward * BU.total(half) / 2)
@@ -755,7 +929,17 @@ class Seg:
         recs += self.new_recs
         import time
         t0 = time.time()
+        for r in recs:
+            if not r.get('done') and J.classify(r) == 'T':
+                r['done'] = True
+                trifora_joinery(kit, r)
+        for ra, rb in two_light_pairs(recs):
+            two_light_joinery(kit, ra, rb)
+        for r in recs:
+            if not r.get('done') and r['kind'] == 'rect' and J.classify(r) == 'E':
+                window_e(kit, r)
         J.build_openings(kit, recs)
+        reveal_finishes(kit, recs)
         objs = kit.flush()
         t1 = time.time()
         lin = [r for r in recs if r.get('type') not in ('PN', 'DN', 'CD') and J.classify(r) is not None
@@ -913,7 +1097,7 @@ class House:
         cell = self.cell
         # ---- L1
         cell(s, D_AX, D, YN1, Y_FOOT, Z1, dict(N='W', S='O', A='W', O='L'), FL_OPEN, flat)          # landing
-        y_core_end = YS0
+        y_core_end = Y_C0 if self.campo else YS0
         cell(s, D_AX + 0.002, D_BAND - 0.002, Y_FOOT + 0.003 / M, y_core_end, Z1,
              dict(N='O', S='W' if self.campo else 'O', A='W', O='O'), FL_OPEN, None)      # flight band (under it)
         cell(s, D_BAND, D, Y_FOOT, y_core_end, Z1, dict(N='O', S='W' if self.campo else 'O', A='O', O='L'),
@@ -1073,10 +1257,10 @@ class House:
         dc = (D_P0 + D_P1) / 2
         # camera | hall partition, L1 and L2
         if not self.campo:
-            wall(kit, BU.PARTITION, h.P(s, dc, YSI0), h.P(s, dc, L1_SOUTH), Z1 - 0.10, SOFF[Z1],
+            wall(kit, PART_CAM, h.P(s, dc, YSI0), h.P(s, dc, L1_SOUTH), Z1 - 0.10, SOFF[Z1],
                  doors=[((5.36 - YSI0) * M, DOOR_ROOM, Z1 + DOOR_HEAD)], prefix='Partition')
         y2 = Y_CAMPO_IN if self.campo else L2_SOUTH
-        wall(kit, BU.PARTITION, h.P(s, dc, YSI0), h.P(s, dc, y2), Z2 - 0.10, SOFF[Z2],
+        wall(kit, PART_CAM, h.P(s, dc, YSI0), h.P(s, dc, y2), Z2 - 0.10, SOFF[Z2],
              doors=[((5.40 - YSI0) * M, DOOR_ROOM, Z2 + DOOR_HEAD)], prefix='Partition')
         # hall | bath partitions (along d)
         for lvl, zf, dd in ((1, Z1, 1.23), (2, Z2, 1.305)):
@@ -1095,7 +1279,7 @@ class House:
         kit, h = self.kit, self
         P = lambda Y: (self.xa, yY(Y))
         # L1
-        wall(kit, SPINE, P(YN1), P(YS0), Z1 - 0.10, SOFF[Z1], prefix='Spine')
+        wall(kit, SPINE, P(YN1), P(Y_C0 if self.campo else YS0), Z1 - 0.10, SOFF[Z1], prefix='Spine')
         if not self.campo:
             wall(kit, BU.WALL_SEP, P(YS0), P(L1_SOUTH), Z1 - 0.10, SOFF[Z1], prefix='Sep')
         # L2
@@ -1115,10 +1299,10 @@ class House:
         sw_cam = -s                    # walls along +Y (south): +d (the camera) lies right for s = +1
         if not self.campo:
             I.door(kit, h.P(s, dc, YSI0), h.P(s, dc, L1_SOUTH), (5.36 - YSI0) * M, DOOR_ROOM, Z1 + DOOR_HEAD, Z1,
-                   0.11 - 0.002, hinge='a', swing=sw_cam)
+                   T_CAM - 0.002, hinge='a', swing=sw_cam)
         y2 = Y_CAMPO_IN if self.campo else L2_SOUTH
         I.door(kit, h.P(s, dc, YSI0), h.P(s, dc, y2), (5.40 - YSI0) * M, DOOR_ROOM, Z2 + DOOR_HEAD, Z2,
-               0.11 - 0.002, hinge='a', swing=sw_cam)
+               T_CAM - 0.002, hinge='a', swing=sw_cam)
         for lvl, zf, dd, t in ((1, Z1, 1.23, 0.11), (2, Z2, 1.305, 0.15)):
             if lvl == 1 and self.campo:
                 continue
@@ -1131,8 +1315,8 @@ class House:
                0.11 - 0.002, hinge='b', swing=-s)
         self.door_floor(s, 'd', Y_C2, D_C2DOOR, DOOR_ROOM, 0.11, Z2, FL_INT)
         if not self.campo:
-            self.door_floor(s, 'Y', dc, 5.36, DOOR_ROOM, 0.11, Z1, FL_OPEN)
-        self.door_floor(s, 'Y', dc, 5.40, DOOR_ROOM, 0.11, Z2, FL_OPEN if self.campo else FL_INT)
+            self.door_floor(s, 'Y', dc, 5.36, DOOR_ROOM, T_CAM, Z1, FL_OPEN)
+        self.door_floor(s, 'Y', dc, 5.40, DOOR_ROOM, T_CAM, Z2, FL_OPEN if self.campo else FL_INT)
         # kitchen door through the L3 landing | kitchen wall (core masonry + both linings)
         dk = (D_CORE - LIN + D_KIT + LIN) / 2
         I.door(kit, h.P(s, dk, YS0), h.P(s, dk, YSI1), (5.36 - YS0) * M, DOOR_ROOM, Z3 + DOOR_HEAD, Z3,
@@ -1277,15 +1461,18 @@ class House:
 
     # ------------------------------------------------- campo: closing wall
     def closing_wall(self):
-        """Campo houses, L1: the core closed at the south by a wall Y 4.776
-        -> 4.99 between the corner piers (n31), lined inside."""
+        """Campo houses, L1: the core closed at the south by a wall to Y 4.99
+        between the corner piers (n31), lined inside; its inner face is on
+        the exterior's corner piers (Y 4.726, drawn 4.776)."""
         kit = self.kit
         z0, z1 = Z1 - 0.10, C.Z_L2_SOFFIT
-        y = YS0
-        for elem, mat, th in CLOSE_WALL:
-            name = f'Wall{elem}' if elem.startswith('Lining') else elem
-            I.prism(kit(name, mat), self.rect(1, -D_ENT, D_ENT, y, y + th / M), z0, z1)
+        y = Y_C0
+        for elem, mat, th in BU.LINING:
+            # across the corridors' lining planes, in front of the corner piers
+            I.prism(kit(f'Wall{elem}', mat), self.rect(1, -D_CORE, D_CORE, y, y + th / M), z0, z1)
             y += th / M
+        # brick between the corner piers (their inner faces at dE -+1.6975)
+        I.prism(kit('CoreWallBrick', 'M_Brick'), self.rect(1, -D_ENT, D_ENT, y, Y_CLOSE), z0, z1)
 
 
 # --------------------------------------------------------------------- walls

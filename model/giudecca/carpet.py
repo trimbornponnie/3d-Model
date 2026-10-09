@@ -821,7 +821,13 @@ def build_middle(ctx, seg, bags):
             op.rect(fs, (yt0 + LANDING_M[0]) / 2, 0.0, NOTCH_TERRACE, FRENCH[0], 8.37 - NOTCH_TERRACE)
         for s in (-1, 1):
             c = NM_ARCH
-            op.arch(f, a, s * COURT_DX, 0.0, c['w'], c['spring'], c['crown'])
+            if geo.THROUGH is None:
+                op.arch(f, a, s * COURT_DX, 0.0, c['w'], c['spring'], c['crown'])
+            else:
+                # interiors: blind arches, the cantine behind have no court opening (n11, n64)
+                rec = geo.opening(f, op.cut, op.panes, u_on(f, a, s * COURT_DX), 0.0, c['w'], c['crown'],
+                                  arch_rise=c['crown'] - c['spring'], keep_recess=True)
+                rec['target'] = np_.name
             two_light(op, f, a, s * COURT_DX, FLOORS[1] + WIN_STD[1], FLOORS[1] + WIN_STD[2])
             win(op, f, a, s * COURT_DX, FLOORS[2])
     for E, inward in part.exposed():
@@ -1430,7 +1436,8 @@ def build_campo_south(ctx, runs, bands, bags):
             # middle pair: open into the porch; outer bays: the cellar fronts
             op.rect(f, a, s * (ARCADE['central_pier'] + 1.22) / 2, 0.0, 1.22, 2.25, through=cs['arcade_t'])
             w = 2.45 if s == slot_side else 2.15
-            op.rect(f, a, s * (2.22 + w / 2), 0.0, w, 2.25)
+            # (interiors: recessed cellar fronts, kept as blind recesses)
+            op.rect(f, a, s * (2.22 + w / 2), 0.0, w, 2.25, keep_recess=geo.THROUGH is not None)
             # L1 bedroom windows toward the campo (n49: singles at axis -+ 3.30; n34)
             win(op, f, a, s * COURT_DX, FLOORS[1])
         # the porch: floor at the dwellings' 0.00, open from the arcade wall to the
