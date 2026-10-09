@@ -26,7 +26,9 @@ finished faces u 0.10 / 3.22, Y 29.05 / 34.95):
       bath window F, bedroom window E, terrace door D;
   stair: one straight flight 0.80 wide against the party wall, 15 risers of
       0.2007 and 14 goings of 0.235, foot riser Y 33.194, top riser Y 31.20
-      (n5 B, n27, n45), steel balustrade on the void side;
+      (n5 B, n27, n45), steel balustrade on the void side; RC waist slab
+      plastered on its soffit and open side, oak treads 30 and risers 15
+      (layers.md S1, matching the parquet);
   core: void and flight under the copper vault (R 6.00 soffit from 5.16 at the
       lining faces, SE 59 / SE 60), lined core walls (W2) and oculus panel;
   party wall: precast flue block at its north end (Y -> 29.40, n27 / n45).
@@ -37,7 +39,7 @@ lining (running on over lintels and sill blocks); party wall 0.20 (SE 60 "155
 the RC spine W4 in the core); partitions 0.10 (n45 "10"); floors F3 (L0,
 320), F1 / F2 (L1 over the kitchen / the portico, 300); roofs R1 under the
 tiles, R2 under the copper; terraces a 0.09 build-up on the slab (finish 3.00
-as built, n5 F "2,9x"). The roof build-ups follow the exterior tile planes
+as built, n5 F "2,9x", in the exterior's paving). The roof build-ups follow the exterior tile planes
 (bar 36 %, lean-to 39.5 %), so the finished ceilings sit up to 6 cm (bar) /
 11 cm (lean-to) off the drawn 34 % line T + 2.47 + 0.34 s.
 """
@@ -84,6 +86,10 @@ Y_BED_DOOR = (30.46, 30.90)          # bedroom door jambs (n45, all 8)
 Y_FOOT = 33.194                      # foot riser (n27 33.19, n5 B)
 N_RISERS, RISER, GOING = 15, T1 / 15, 0.235          # n5 B: 15 risers; goings n27 / n45
 Y_LND = Y_FOOT - dY(N_RISERS * GOING)                 # 31.058 end of the top tread = landing edge
+WAIST, TREAD_T, NOSING = 0.15, 0.03, 0.02             # RC waist slab, oak tread 30 with its nosing
+RISER_T = 0.015                                       # oak riser board 15 (layers.md L5 S1)
+TREAD_MAT = 'M_DoorLeaf'             # oak treads and risers, matching the parquet (layers S1, schiera S.6;
+#                                      the towers' private flights use the same, towers.md T.5)
 
 # ------------------------------------------------------------------ bands (u, metres)
 U_PW = 0.10                          # party wall half (0.20, SE 60)
@@ -126,8 +132,9 @@ PARTY_SEP = [('Plaster', 'M_PlasterInt', 0.015), ('Leaf', 'M_HollowBrick', 0.075
 PARTY_SPINE = B.WALL_SPINE                            # W4 200 in the core: the flights bear on it
 PARTY_FLUE = [('FluePlaster', 'M_PlasterInt', 0.015), ('Flue', 'M_Structure', 0.170),
               ('FluePlaster', 'M_PlasterInt', 0.015)]  # precast flue block in the party wall (n27 / n45)
-TERRACE_THIN = [('Tiles', 'M_Stone', 0.015), ('Bed', 'M_Screed', 0.020), ('Membrane', 'M_Membrane', 0.010),
+TERRACE_THIN = [('Tiles', 'M_Paving', 0.015), ('Bed', 'M_Screed', 0.020), ('Membrane', 'M_Membrane', 0.010),
                 ('Insulation', 'M_Insulation', 0.030), ('Falls', 'M_Screed', 0.015)]   # 90 on the slab
+#                                    (finish in the exterior's terrace paving, M_Paving: unchanged from outside)
 PLASTER = [('Plaster', 'M_PlasterInt', 0.015)]        # on internal masonry (bay walls, joint leaves)
 PARTITION_10 = [('Plaster', 'M_PlasterInt', 0.010), ('Core', 'M_HollowBrick', 0.080),
                 ('Plaster', 'M_PlasterInt', 0.010)]   # partitions "10" (n45; W7 would be 110)
@@ -186,16 +193,6 @@ def bedroom_end(a: float, s: int) -> tuple[float, str]:
     if abs(e - X.JOINT_E) < 1e-6:
         return abs(e - a) * M - X.GAP / 2 - JOINT_LEAF, 'int'
     return abs(e - a) * M - BAY_WALL / 2, 'int'
-
-
-def portico_end(a: float, s: int) -> float:
-    """u of the far end of the portico passage beside dwelling (a, s)."""
-    for p in X.porticoes():
-        if s > 0 and abs(p['lo'] - (a + X.HALF)) < 1e-6:
-            return (p['hi'] - a) * M
-        if s < 0 and abs(p['hi'] - (a - X.HALF)) < 1e-6:
-            return (a - p['lo']) * M
-    raise ValueError(a)
 
 
 class Dw:
@@ -443,6 +440,18 @@ def _niche_reveals(kit, r) -> None:
     I.face_box(bm, r, b - PL, b, zf + PL, zt - PL, d0, d1)
 
 
+def _oculus_reveal(kit, r) -> None:
+    """Plaster sleeve (10 mm) lining the oculus reveal through the panel
+    lining, from the panel's back face to the finished face; the lining is
+    cut 10 mm wider round it (_lining_cutter), so its cut insulation does not
+    show between the board and the panel."""
+    if r['kind'] != 'round':
+        return
+    d0, d1 = sorted(abs(r['coord'] - yY(Y)) for Y in (Y_PB, Y_PL))
+    big = I.offset(I.clean(r['outline']), -PL)
+    J._ring(kit('RevealPlaster', 'M_PlasterInt'), J.Frame3(r), big, PL, d0, d1)
+
+
 def _add_pockets(bm, recs) -> None:
     for r in recs:
         for u0, u1, z0, z1, d0, d1 in _pockets(r) + _extra_pockets(r):
@@ -534,6 +543,9 @@ def _lining_cutter(recs):
             continue
         f = geo.Face(r['axis'], r['coord'], r['out'])
         rects = _lining_rects(r)
+        if r['kind'] == 'round':                   # oculus: room for its reveal sleeve (_oculus_reveal)
+            f.solid(bm, I.offset(I.clean(r['outline']), -PL), 1.2, outside=0.3)
+            continue
         if not rects:
             f.solid(bm, r['outline'], 1.2, outside=0.3)
             continue
@@ -559,9 +571,22 @@ def _pocket_zones(recs) -> list[tuple]:
     return out
 
 
-def _paint(ctx, body, zones, tol=0.003) -> int:
+def _portico_rects(E0: float, E1: float) -> list[tuple[float, float, float, float]]:
+    """World (x0, x1, y0, y1) of the portico passages of a segment, as
+    schiera.py cuts them (between the 0.37 walls' inner faces)."""
+    y0, y1 = sorted((yY(Y_NO) - X.WALL, yY(Y_BO) + X.WALL))
+    out = []
+    for p in X.porticoes():
+        if E0 < p['c'] < E1:
+            x0, x1 = sorted((xE(p['lo']), xE(p['hi'])))
+            out.append((x0, x1, y0, y1))
+    return out
+
+
+def _paint(ctx, body, zones, skip=(), tol=0.003) -> int:
     """Interior plaster on the masonry faces left inside the dwellings (pier,
-    parapet, lintels, internal walls; the linings cover the rest)."""
+    parapet, lintels, internal walls; the linings cover the rest). Faces of
+    the portico soffits (skip: the passages' plan rectangles) stay exterior."""
     mat = ctx.mats['M_PlasterInt']
     me = body.data
     if mat.name not in [m.name for m in me.materials if m]:
@@ -570,6 +595,9 @@ def _paint(ctx, body, zones, tol=0.003) -> int:
     n = 0
     for poly in me.polygons:
         c = poly.center
+        if poly.normal.z < -0.99 and abs(c.z - RAW) < 0.005 and any(
+                x0 - tol <= c.x <= x1 + tol and y0 - tol <= c.y <= y1 + tol for x0, x1, y0, y1 in skip):
+            continue
         for x0, x1, y0, y1, z0, top in zones:
             if x0 - tol <= c.x <= x1 + tol and y0 - tol <= c.y <= y1 + tol and c.z >= z0 - tol:
                 zt = top(c.x, c.y) if callable(top) else top
@@ -605,6 +633,78 @@ def _trim_seats(bm, recs) -> None:
             I.face_box(bm, r, u0 - 0.08, u1 + 0.08, z0 - 0.06, z0, -0.01, 0.1153)
         if sp['door'] and kind in ('C', 'D') and z0 - zf > 0.01 and garden:
             I.face_box(bm, r, u0 - J.MAZ, u1 + J.MAZ, zf - 0.10, zf - 0.02, -0.01, X.GARDEN_IN)
+
+# ------------------------------------------------------------------ stair
+class _Route:
+    """Kit stand-in for interior.flight: sends the elements named in routes
+    {element: (kit element, material)} to the kit and drops the others."""
+
+    def __init__(self, kit, routes):
+        self.kit, self.routes, self.dropped = kit, routes, []
+
+    def __call__(self, element, mat, **props):
+        if element in self.routes:
+            return self.kit(*self.routes[element])
+        bm = bmesh.new()
+        self.dropped.append(bm)
+        return bm
+
+    def free(self):
+        for bm in self.dropped:
+            bm.free()
+
+
+def _flight(kit, dw: Dw) -> None:
+    """The flight against the party wall (2 mm joint to its plaster; the foot
+    sits in the floor finishes): RC waist slab (interior.flight's profile),
+    oak treads and riser boards (layers.md S1: "oak tread 30 + riser 15,
+    matches the parquet"), plaster on its soffit and open side face, and
+    the soffit plaster's return over the landing slab's edge at the top."""
+    s = dw.s
+    u0 = U_PW + 0.002
+    a = dw.p(u0, Y_FOOT)
+    b = (a[0], a[1] + 1.0)                             # walking north (+y)
+
+    def t(u):                                          # across a -> b (left = +u for both s)
+        return s * (u - u0)
+
+    def strip(bm, outline, ua, ub):
+        I.oprism(bm, a, b, outline, *sorted((t(ua), t(ub))))
+
+    kw = dict(waist=WAIST, tread_t=TREAD_T, nosing=NOSING, side=s, tread_top_last=True)
+    args = ((0.0, 1.0), )
+    steps = (N_RISERS, RISER, GOING, 0.0)
+    for start, width, routes in (
+            (a, U_FL - u0, {'StairTreads': ('StairTreads', TREAD_MAT)}),                     # full width
+            (a, U_FL - PL - u0, {'StairStructure': ('StairStructure', 'M_Structure')}),      # RC
+            (dw.p(U_FL - PL, Y_FOOT), PL, {'StairStructure': ('StairPlaster', 'M_PlasterInt')})):  # side
+        r = _Route(kit, routes)
+        I.flight(r, start, *args, width, *steps, **kw)
+        r.free()
+    # oak riser boards under the nosings, on the tread below (the floor at the foot)
+    rb = kit('StairRisers', TREAD_MAT)
+    for k in range(N_RISERS):
+        sk = k * GOING
+        strip(rb, [(sk - RISER_T, k * RISER), (sk, k * RISER), (sk, (k + 1) * RISER - TREAD_T),
+                   (sk - RISER_T, (k + 1) * RISER - TREAD_T)], u0, U_FL)
+    # soffit plaster (from the floor finishes up), returned down over the landing slab's
+    # cut edge at the top to the L0 ceiling plaster
+    zt = -TREAD_T
+    slope = RISER / GOING
+    w_v = WAIST / math.cos(math.atan(slope))
+    pv = PL * math.sqrt(1 + slope * slope)             # 10 mm across the slope, vertically
+
+    def soffit(sv):
+        return zt + slope * sv - w_v
+    s_hit, s_top = w_v / slope, N_RISERS * GOING
+    z_st = min(soffit(s_top), zt + N_RISERS * RISER - w_v)
+    sp = kit('StairPlaster', 'M_PlasterInt')
+    strip(sp, [(s_hit, zt), (s_top, z_st), (s_top, RAW - PL), (s_top - PL, RAW - PL),
+               (s_top - PL, soffit(s_top - PL) - pv), (s_hit + pv / slope, zt)], u0, U_FL)
+    # ... and on the slab's side face beside it (u 0.90, under the flight's soffit)
+    s_b = (RAW - PL + pv - zt + w_v) / slope
+    strip(sp, [(s_b, RAW - PL), (s_top - PL, RAW - PL), (s_top - PL, soffit(s_top - PL) - pv)], U_FL - PL, U_FL)
+
 
 # ------------------------------------------------------------------ block
 def _block(kit, a):
@@ -711,9 +811,7 @@ def _dwelling(kit, dw: Dw):
                            (U_FL, Y_LND), (U_PW, Y_LND)]), RAW, SLAB_TOP)
     I.prism(slab, dw.poly([(U_CM, Y_BO), (U_PP, Y_BO), (U_PP, Y_C), (U_BS, Y_C), (U_BS, Y_HW),
                            (U_CM, Y_HW)]), RAW, SLAB_TOP)                                        # terrace + B2
-    # render under the slab over the portico (the passage ceiling, as built)
-    up = min(portico_end(dw.a, s), ue)
-    I.prism(kit('PorticoRender', 'M_Plaster'), dw.rect(U_BO, up, Y_NI, Y_BI), RAW - PL, RAW)
+    # (the render under the slab over the porticoes: build(), per passage)
     yb0, yb1 = Y_BATH - dY(0.055), Y_BATH + dY(0.055)
     I.floor_stack(kit, dw.rect(U_PW, U_PART[0], yNf, yb0), T1, FIN_INT)                      # bathroom
     y_prp = Y_BO - dY(PARAPET_T)
@@ -721,10 +819,15 @@ def _dwelling(kit, dw: Dw):
                                 (U_FL, Y_LND), (U_PW, Y_LND)]), T1, FIN_INT)                 # landing
     # parapet over the void in the plane of the bar's S face (0.92 high, n5 F; 0.10, n45)
     yp = Y_BO - dY(PARAPET_T / 2)
-    Lq = U_CL - U_FL
-    _wall(kit, dw.p(U_FL, yp), dw.p(U_CL, yp), _notched(Lq, SLAB_TOP, [(0.0, Z_PARAPET), (Lq, Z_PARAPET)]),
+    Lq = U_CL - U_FL - PL
+    _wall(kit, dw.p(U_FL + PL, yp), dw.p(U_CL, yp), _notched(Lq, SLAB_TOP, [(0.0, Z_PARAPET), (Lq, Z_PARAPET)]),
           PARTITION_10, 'Partition')
+    dw.box(kit('PartitionPlaster', 'M_PlasterInt'), U_FL, U_FL + PL, Y_BO - dY(PARAPET_T), Y_BO,
+           SLAB_TOP, Z_PARAPET)                                                                # plastered free end
     dw.box(pl, U_FL, U_CL, Y_BO - dY(PARAPET_T), Y_BO, Z_PARAPET, Z_PARAPET + PL)           # plaster cap
+    # the slab's corner beside the top of the flight (u 0.90 -> B1's end plaster): soffit, south edge
+    dw.box(pl, U_FL, U_VD - PL, Y_LND, Y_BO, RAW - PL, RAW)
+    dw.box(pl, U_FL, U_VD - PL, Y_BO, Y_BO + dY(PL), RAW - PL, SLAB_TOP)
     bed = dw.rect(U_PART[1], uf, yNf, yBf)
     I.floor_stack(kit, bed, T1, FIN_INT[:2])                                                   # bedroom
     I.floor_stack(kit, dw.rect(U_PART[1], U_BS, yNf, yBf), T1 - 0.06, FIN_INT[2:])          # over the kitchen
@@ -778,9 +881,7 @@ def _dwelling(kit, dw: Dw):
         _band(kit('Ceiling' + elem, mat), lambda x, r=r: _arc(ZC_IN, r)(x - xa),
               lambda x, r=r, t=t: _arc(ZC_IN, r - t)(x - xa), xs, yY(Y_PL), yY(Y_BO + dY(PL)))
         r -= t
-    # 2 mm joint to the party wall's plaster (the foot sits in the floor finishes there)
-    I.flight(kit, dw.p(U_PW + 0.002, Y_FOOT), (0.0, 1.0), U_FL - U_PW - 0.002, N_RISERS, RISER, GOING, 0.0,
-             waist=0.15, tread_t=0.03, nosing=0.02, side=s, tread_top_last=True)
+    _flight(kit, dw)
     # balustrade on the void side: flat bars every 0.11, rail 1.00 above the nosings, stringer bar
     ub = (U_FL + U_VD) / 2
     p0 = Vector((*dw.p(ub, Y_FOOT + dY(0.02)), RISER - 0.20))
@@ -816,14 +917,20 @@ def build(ctx) -> None:
         _trim_seats(cut, recs)
         zones += _pocket_zones(recs)
         I.hollow(ctx, body, cut)
-        _paint(ctx, body, zones)
+        ports = _portico_rects(E0, E1)
+        _paint(ctx, body, zones, skip=ports)
         # 2. layers, partitions, doors, stairs, joinery
         kit = I.Kit(ctx, PART, tag, COL)
         for a in axes:
             _block(kit, a)
             for s in (1, -1):
                 _dwelling(kit, Dw(a, s))
+        # render under the L1 slab over each portico passage, wall to wall and to its ends (as built)
+        for x0, x1, y0, y1 in ports:
+            I.prism(kit('PorticoRender', 'M_Plaster'), I.rect(x0, x1, y0, y1), RAW - PL, RAW)
         J.build_openings(kit, recs + precs)
+        for r in precs:
+            _oculus_reveal(kit, r)
         for r in recs:
             for part in _extra_parts(r):
                 name = 'SillBlocks' if J.classify(r) == 'FS' else 'Thresholds'      # M_Concrete both
