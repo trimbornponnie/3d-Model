@@ -379,13 +379,79 @@ def _hollow(ctx, body, volumes):
     geo.cleanup(body, dist=1e-6, recalc=False)
 
 
-def _cut_openings(ctx, obj, recs, extra):
+def _lining_cutter(recs, depth=0.60):
+    """joinery.lining_cutter, 0.60 deep instead of 1.2 (the linings lie at
+    d 0.28 - 0.45 behind the outer faces): the openings and their pockets."""
+    bm = bmesh.new()
+    for r in recs:
+        kind = J.classify(r)
+        geo.Face(r['axis'], r['coord'], r['out']).solid(bm, r['outline'], depth, outside=0.3)
+        for u0, u1, z0, z1, d0, d1 in J.pockets(r, kind):
+            I.face_box(bm, r, u0, u1, z0, z1, J.WALL - 0.02, depth)
+    return bm
+
+
+def _cut_linings(ctx, objs, recs):
+    """Cut the openings out of the wall-lining layer objects in one exact
+    difference: the layers are joined into one temporary mesh (one material
+    slot each), cut, and split back by shell. The shells are not welded."""
+    objs = [o for o in objs if o is not None]
+    if not objs or not recs:
+        return
+    bm = bmesh.new()
+    for i, o in enumerate(objs):
+        me = o.data
+        n0 = len(bm.faces)
+        bm.from_mesh(me)
+        for f in list(bm.faces)[n0:]:
+            f.material_index = i
+    me = bpy.data.meshes.new('CUT_LiningJoin')
+    bm.to_mesh(me)
+    bm.free()
+    for o in objs:
+        me.materials.append(o.data.materials[0])
+    tmp = bpy.data.objects.new('CUT_LiningJoin', me)
+    ctx.cutters.objects.link(tmp)
+    _cut_openings(ctx, tmp, recs, _lining_cutter(recs))
+    bm = bmesh.new()
+    bm.from_mesh(tmp.data)
+    bm.faces.index_update()
+    shell = {}
+    seen = set()
+    for f0 in bm.faces:
+        if f0.index in seen:
+            continue
+        comp, stack = [], [f0]
+        seen.add(f0.index)
+        while stack:
+            f = stack.pop()
+            comp.append(f)
+            for e in f.edges:
+                for g in e.link_faces:
+                    if g.index not in seen:
+                        seen.add(g.index)
+                        stack.append(g)
+        m = max(f.material_index for f in comp)
+        for f in comp:
+            shell[f.index] = m
+    for i, o in enumerate(objs):
+        b = bm.copy()
+        b.faces.index_update()
+        bad = [f for f in b.faces if shell[f.index] != i]
+        bmesh.ops.delete(b, geom=bad, context='FACES')
+        for f in b.faces:
+            f.material_index = 0
+        b.to_mesh(o.data)
+        b.free()
+        o.data.update()
+    bm.free()
+    bpy.data.objects.remove(tmp, do_unlink=True)
+
+
+def _cut_openings(ctx, obj, recs, bm):
     """interior.cut_openings for a layer object made of separate touching
     shells (the wall linings): the cutter's shells and the object's shells
-    are not welded (no merge by distance beyond 1 micron)."""
-    bm = extra
-    for r in recs:
-        geo.Face(r['axis'], r['coord'], r['out']).solid(bm, r['outline'], 1.5, outside=0.3)
+    are not welded (no merge by distance)."""
     if not len(bm.faces):
         bm.free()
         return
@@ -694,10 +760,8 @@ class Seg:
         t1 = time.time()
         lin = [r for r in recs if r.get('type') not in ('PN', 'DN', 'CD') and J.classify(r) is not None
                and not r['target'].startswith('SM_Carpet_CantineN')]
-        for name in ('WallLiningAdhesive', 'WallLiningInsulation', 'WallLiningBoard'):
-            o = objs.get(kit.name(name))
-            if o is not None and lin:
-                _cut_openings(self.R.ctx, o, lin, J.lining_cutter(lin))
+        _cut_linings(self.R.ctx, [objs.get(kit.name(n)) for n in
+                                  ('WallLiningAdhesive', 'WallLiningInsulation', 'WallLiningBoard')], lin)
         print(f'[carpet north] {self.seg.tag}: joinery + flush {t1 - t0:.1f} s, linings {time.time() - t1:.1f} s')
 
 
@@ -850,7 +914,7 @@ class House:
         # ---- L1
         cell(s, D_AX, D, YN1, Y_FOOT, Z1, dict(N='W', S='O', A='W', O='L'), FL_OPEN, flat)          # landing
         y_core_end = YS0
-        cell(s, D_AX + 0.002, D_BAND - 0.002, Y_FOOT, y_core_end, Z1,
+        cell(s, D_AX + 0.002, D_BAND - 0.002, Y_FOOT + 0.003 / M, y_core_end, Z1,
              dict(N='O', S='W' if self.campo else 'O', A='W', O='O'), FL_OPEN, None)      # flight band (under it)
         cell(s, D_BAND, D, Y_FOOT, y_core_end, Z1, dict(N='O', S='W' if self.campo else 'O', A='O', O='L'),
              FL_OPEN, flat)                                                                          # corridor
@@ -879,7 +943,8 @@ class House:
         # ---- L3
         cell(s, D_AX, D, YNI0, YNI1, Z3, dict(N='L', S=('L', Z_BEAM3), A='W', O='O'), FL_INT, 'roofN')   # soggiorno
         cell(s, D, dN, YNI0, YNI1, Z3, dict(N='L', S='L', A='O', O=tN), FL_INT, 'roofN')
-        cell(s, D_AX, D, YNI1, YN1, Z3, dict(N='O', S='O', A='W', O='L'), FL_INT, ('beam', Z_BEAM3))      # pass
+        cell(s, D_AX, D, YNI1, YN1, Z3, dict(N='O', S='O', A='W', O='L'), FL_INT, ('beam', Z_BEAM3),
+             trim=dict(O=(0.002 / M, 0.0)))                                                              # pass
         cell(s, D_AX, D, YN1, Y_FOOT, Z3, dict(N='O', S='O', A='W', O='L'), FL_INT, 'vault')             # landing
         cell(s, D_BAND, D, Y_FOOT, YS0, Z3, dict(N='O', S='O', A='O', O='L'), FL_INT, 'vault')           # corridor
         kd = (5.36 - DOOR_ROOM / 2 / M, 5.36 + DOOR_ROOM / 2 / M, Z3 + DOOR_HEAD)
@@ -899,7 +964,7 @@ class House:
         prof = [(self.X(s, x), z) for x, z in zip(xs, zt)] + [(self.X(s, D_AX), zs)]
         geo.add_prism_y(sk, I.ccw(prof), yY(YN1) - PL, yY(YN1))
 
-    def cell(self, s, d0, d1, Y0, Y1, zf, sides, floor, ceil, gaps=None):
+    def cell(self, s, d0, d1, Y0, Y1, zf, sides, floor, ceil, gaps=None, trim=None):
         """A room (or part of one): floor layers inside the finished faces,
         linings / plaster on its masonry sides, ceiling plaster."""
         kit = self.kit
@@ -954,6 +1019,8 @@ class House:
             inward = 1 if k == 'A' else -1
             ya = Y0 + (th['N'] / M if has('N') and typ('N')[1] is None else 0.0)
             yb = Y1 - (th['S'] / M if has('S') and typ('S')[1] is None else 0.0)
+            if trim and k in trim:
+                ya, yb = ya + trim[k][0], yb - trim[k][1]
             self.strip(s, 'Y', dA, inward, ya, yb, zfrom if zfrom is not None else z0, top, lay(k), gaps.get(k, ()))
 
     def strip(self, s, along, c, inward, l0, l1, z0, top, layers, gaps=()):
@@ -1039,16 +1106,8 @@ class House:
         # L3: N-pav to the roof, beam zone, core strip and notch landing to the vault
         wall(kit, BU.WALL_SEP, P(YNI0), P(YNI1), Z3 - 0.10, roof_ceiling('N'), prefix='Sep')
         wall(kit, SPINE, P(YNI1), P(YN1), Z3 - 0.10, Z_BEAM3, prefix='Spine')
-        # under the vault: each layer's top on the vault soffit's facets (24 over +-1.77)
-        inner = I._arc_band(self.xa, VAULT_ZC, VAULT_RIN + 0.1, VAULT_RIN, D_CORE, 24)[25:]
-        soff = lambda x: _poly_z(inner, x)
-        t_left = BU.total(SPINE) / 2
-        for elem, mat, t in SPINE:
-            xa_, xb_ = sorted((self.xa + t_left - t, self.xa + t_left))
-            xs = [xa_] + [x for x, z in inner if xa_ < x < xb_] + [xb_]
-            prof = [(xa_, Z3 - 0.10), (xb_, Z3 - 0.10)] + [(x, soff(x)) for x in reversed(xs)]
-            geo.add_prism_y(kit(f'Spine{elem}', mat), prof, yY(YX0), yY(YN1))
-            t_left -= t
+        zc = VAULT_ZC + VAULT_RIN + 0.002            # 2 mm into the vault lining board at the crown
+        wall(kit, SPINE, P(YN1), P(YX0), Z3 - 0.10, zc, prefix='Spine')
 
     def doors(self, s):
         kit, h = self.kit, self
