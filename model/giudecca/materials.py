@@ -23,7 +23,7 @@ PALETTE = {
     'M_Brick': ((156, 84, 62), 0.0, 0.85),        # Venetian face brick ("mattoni a faccia vista")
     'M_Concrete': ((196, 191, 180), 0.0, 0.75),   # exposed concrete copings, bands, lintels, sills
     'M_Copper': ((112, 78, 58), 0.55, 0.45),      # copper sheet roofs ("manto in lamina di rame")
-    'M_Glass': ((38, 48, 54), 0.0, 0.08),
+    'M_Glass': ((200, 214, 216), 0.0, 0.05),     # clear glazing (transmissive, see make_materials)
     'M_Frame': ((52, 62, 58), 0.2, 0.5),          # painted window frames / railings
     'M_Paving': ((166, 160, 148), 0.0, 0.9),      # trachyte / stone paving
     'M_Ground': ((134, 128, 116), 0.0, 0.95),
@@ -87,6 +87,12 @@ def make_materials(textured: bool = True, texture_dir: str | None = None) -> dic
         bsdf.inputs['Roughness'].default_value = rough
         m.diffuse_color = col
         m.use_backface_culling = True
+        if name == 'M_Glass':
+            # clear double glazing: transmissive, so rooms get daylight and the windows
+            # read as glass from inside (exported as KHR_materials_transmission)
+            bsdf.inputs['Transmission Weight'].default_value = 1.0
+            bsdf.inputs['IOR'].default_value = 1.5
+            m.use_backface_culling = False
         if textured and name in TEXTURES:
             textures.attach(m, TEXTURES[name](texture_dir))
         mats[name] = m
