@@ -635,6 +635,27 @@ folders):
 * Layer thickness probes (F1, F2, F3, the hall floor, R1, R2, terraces) and interior perspectives of
   every room type.
 
+**Final whole-model review.** After integration, the whole model was reviewed again through three
+lenses: the exterior compared with the exterior-only build, the part boundaries, and an interior
+walk-through of more than 50 rooms. Each finding was checked by an independent verifier before it
+was fixed. Fixed in this round:
+
+* Carpet campo ends: the middle/south dividing wall showed on the campo façade; the façade is
+  continuous brick again.
+* Carpet middle and south rows: stair soffits, strings and risers plastered; slab edges at the stair
+  wells finished; the bay-wall end at the L1 hall opening, the lining corners at the L2 living /
+  landing and L0 living / core openings, and the kitchen niches finished; duplicate reveal shells and
+  overlapping sill blocks removed.
+* Carpet north row: the pier end at the entrance wall plastered (`WallLiningReturn`); the entrance
+  frame moved 5 mm into the hall so no insulation shows at the jambs.
+* Towers: plaster returns close the L3 stair-hall vault lining at both ends; 12 mm stop beads inside
+  the street door close the slit round the leaf.
+* Schiera: the copper springing strip over the vault is flat again from outside; the bedroom door is
+  parked at 60° so it no longer stands in front of the terrace door.
+* All panelled entrance leaves: the muntin no longer runs through the lock rail (a black square in
+  the renders).
+* Glazing is transmissive glass (it rendered black in interior views).
+
 ## 7. Known limitations and open questions
 
 Consolidated from the research and the builders' reports.
@@ -685,8 +706,11 @@ Consolidated from the research and the builders' reports.
     party-wall arches, rainwater outlets on the north-row terraces, the tower foundation void,
     skirtings. The schiera's exterior flue pipes stand next to the bar's south wall while the drawn
     duct is at the north end of the party wall; the outlet is not shown (low confidence).
-15. Carpet core-window reveals are lined but square, not splayed 45° (n3). Towers: lining ends not
-    re-verified after the review.
+15. Carpet core-window reveals are lined but square, not splayed 45° (n3).
+
+**Small deviations from the final review:** the north-row entrance frame sits 5 mm deeper into the
+hall; the tower street doors have 12 mm stop beads inside; 10–12 mm plaster returns close the tower
+vault lining and the north-row pier ends; the schiera bedroom door is drawn open at 60°.
 
 **Finishes – client decision**
 
