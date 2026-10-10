@@ -390,7 +390,8 @@ def _door_leaf(kit, fr, s, u0, u1, z0, z1, ds, zf, prefix):
     zu1 = min(zf + 1.92, z1 - 0.06)
     frame_o = _rect(u0 + 0.003, u1 - 0.003, z0 + 0.008, z1 - 0.003)
     _ring(lb, fr, frame_o, st, ds, ds + t, bottom=zl0 - z0 - 0.008)
-    _box(lb, fr, um - st / 2, um + st / 2, zl0, zu1, ds + 0.001, ds + t - 0.001)          # muntin
+    for c, d in ((zl0, zl1), (zu0, zu1)):                                                  # muntin, split at the lock rail
+        _box(lb, fr, um - st / 2, um + st / 2, c, d, ds + 0.001, ds + t - 0.001)
     _box(lb, fr, u0 + st, u1 - st, zl1, zu0, ds + 0.001, ds + t - 0.001)                    # lock rail
     _box(lb, fr, u0 + st, u1 - st, zu1, z1 - 0.003 - st, ds + 0.001, ds + t - 0.001)        # top rail
     pb = kit(f'{prefix}DoorPanels', s['leaf_mat'])
