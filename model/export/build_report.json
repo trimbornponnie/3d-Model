@@ -124,8 +124,8 @@
  "timings_s": {
   "site": 0.4,
   "towers": 1.6,
-  "carpet": 6.8,
-  "schiera": 1.5
+  "carpet": 7.7,
+  "schiera": 1.7
  },
  "parts": [
   "site",
@@ -139,6 +139,7 @@
   "obj": "/home/user/3d-Model/model/output/SM_Giudecca_IACP_Valle.obj",
   "blend": "/home/user/3d-Model/model/output/SM_Giudecca_IACP_Valle.blend"
  },
+ "total_s": 20.8,
  "renders": [
   "/home/user/3d-Model/model/output/axo_sw.png",
   "/home/user/3d-Model/model/output/model_east.png",
@@ -146,5 +147,5 @@
   "/home/user/3d-Model/model/output/top.png",
   "/home/user/3d-Model/model/output/campo.png"
  ],
- "total_s": 618.4
+ "web": {}
 }

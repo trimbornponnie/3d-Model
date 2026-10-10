@@ -27,7 +27,7 @@ floors, roofs, vaults and terraces (insulation, linings, screeds, parquet, …).
 | [`docs/ANALYSIS.md`](docs/ANALYSIS.md) | The building specification derived from the drawings: grid, levels, roof rule, every part with its dimensions and the drawing each value comes from. |
 | [`docs/INTERIORS.md`](docs/INTERIORS.md) | The interiors: construction build-ups (walls, floors, roofs), the joinery catalogue, the rooms and stairs of every dwelling type, deviations from the drawings and open questions. |
 | [`model/export/`](model/export/) | **The exterior model**: `.glb`, `.fbx`, `.obj` + `.mtl`, the Blender file `.blend`, the textures and preview renders. |
-| [`model/export/interiors/`](model/export/interiors/) | **The full model with interiors**: the same formats, plus the interior and cutaway renders. |
+| [`model/export/interiors/`](model/export/interiors/) | **The full model with interiors**: `.glb`, `.fbx`, `.blend`, the `.obj` + `.mtl` with the textures as a ZIP file (the plain `.obj` is too large for GitHub), plus the interior and cutaway renders. |
 | [`model/giudecca/`](model/giudecca/) | The Python/Blender code: `params.py` (all dimensions), `towers.py`, `carpet.py`, `schiera.py`, `site.py` for the exterior; `interior_*.py`, `interior.py`, `joinery.py`, `buildups.py` for the interiors; plus shared geometry, materials, textures, validation and rendering. |
 | [`model/build.py`](model/build.py) | Builds, checks and exports the whole model. |
 
@@ -46,8 +46,9 @@ floors, roofs, vaults and terraces (insulation, linings, screeds, parquet, …).
 * **Blender (free, blender.org):** open `SM_Giudecca_IACP_Valle.blend`. The
   objects are grouped in collections by part (Towers, Carpet, Schiera, Site).
 * **Rhino, SketchUp, 3ds Max, ArchiCAD and similar:** import the `.fbx` or the
-  `.obj`. Keep the `.mtl` and the two `T_*.png` files in the same folder as the
-  `.obj`.
+  `.obj`. Keep the `.mtl` and the `T_*.png` files in the same folder as the
+  `.obj`. For the interiors model, unzip `SM_Giudecca_IACP_Valle_Interiors_OBJ.zip`
+  first; it contains all of these.
 
 To download a single file from GitHub, open it and click "Download raw file".
 To download everything, use "Code → Download ZIP" on the repository page.
@@ -64,8 +65,8 @@ To download everything, use "Code → Download ZIP" on the repository page.
 
 | | Exterior | With interiors |
 |---|---|---|
-| Objects | 310 meshes in 15 materials (brick, concrete, copper, clay tiles, glass, …) | ≈ 2,000 meshes in 27 materials (plus insulation, screed, plasterboard, oak parquet, joinery, …) |
-| Triangles | ≈ 119,000 | ≈ 1,000,000 |
+| Objects | 310 meshes in 15 materials (brick, concrete, copper, clay tiles, glass, …) | 2,028 meshes in 27 materials (plus insulation, screed, plasterboard, oak parquet, joinery, …) |
+| Triangles | 119,436 | 1,033,284 |
 | Dwellings | – | 94: 30 in the towers, 56 in the tappeto, 8 in the schiera, each with rooms, doors, stairs and joinery |
 | Buildings | 119.5 × 65.1 m; highest copings 13.12 m (north row, towers) | |
 | Floors | 0.00 / 3.01 / 6.02 / 9.02 m |
@@ -142,8 +143,10 @@ Die Beschreibung steht in `docs/INTERIORS.md` (englisch).
 3. **Mit Blender (kostenlos):** `SM_Giudecca_IACP_Valle.blend` herunterladen und
    öffnen.
 4. **Für Rhino, SketchUp, ArchiCAD usw.:** die `.fbx`- oder `.obj`-Datei
-   importieren. Bei `.obj` die `.mtl`-Datei und die beiden `T_*.png`-Bilder in
-   denselben Ordner legen.
+   importieren. Bei `.obj` die `.mtl`-Datei und die `T_*.png`-Bilder in
+   denselben Ordner legen. Beim Modell mit Innenräumen liegt die `.obj` mit
+   allem Zubehör in der ZIP-Datei `SM_Giudecca_IACP_Valle_Interiors_OBJ.zip`;
+   diese zuerst entpacken.
 
 **Maßstab:** 1 Einheit = 1 Meter, ±0,00 = Erdgeschoss.
 

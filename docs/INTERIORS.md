@@ -581,19 +581,21 @@ objects including the site.
 
 ## 6. Validation and performance
 
-**Full build** (`python model/build.py --interiors`, `build_report.json`): **1,982 objects, 976,034
-triangles, 0 n-gons, 0 `[problem]` lines, 103 warnings, 81 slivers, 212.5 s** (site 0.3 s, towers
-10.0 s, carpet 90.9 s, schiera 22.9 s; the rest is export preparation, validation and export).
+**Full build** (`python model/build.py --interiors`, `model/export/interiors/build_report.json`):
+**2,028 objects, 1,033,284 triangles, 0 n-gons, 0 `[problem]` lines, 103 warnings, 81 slivers**
+(module times: site 0.4 s, towers 9.3 s, carpet 71.5 s, schiera 15.0 s; with validation and export
+about 3.5 minutes).
 
-| Part | Triangles (part, incl. joinery) | Budget | Objects | Module time | With the site |
-|---|---|---|---|---|---|
-| Towers | 247,972 (≈ 24.7k per tower) | 250,000 | 642 | 10–13 s | 685 objects, 273,740 |
-| Carpet north | 217,278 (kit objects 190,798 + bodies 26,480) | 500,000 | 350 kit objects | ≈ 50 s idle, 66 s loaded | carpet (both modules) + site: 1,198 objects, 655,296 |
-| Carpet middle + south | ≈ 392,000 (354k in 614 kit objects, 38k in the bodies) | 450,000 | 614 | 27–40 s | |
-| Schiera | 70,302 (17,540 exterior) | 150,000 | — | 8–17 s | 145 objects, 96,454 |
+| Part (collections) | Objects | Triangles (exterior + interior + joinery) | Interior budget |
+|---|---|---|---|
+| Towers (East + West) | 662 | 250,132 (≈ 25k per tower) | 250,000 |
+| Carpet (East + West + Campo) | 1,215 | 682,538 | north 500,000 + middle/south 450,000 |
+| Schiera | 128 | 75,886 | 150,000 |
+| Site | 23 | 24,728 | – |
 
-The towers' margin is ≈ 2k triangles; the balusters (≈ 1.3k per tower) are the first candidate for
-simplification.
+The towers sit at their budget after the final-review additions (stop beads and plaster returns);
+the balusters (≈ 1.3k triangles per tower) are the first candidate for simplification. The
+exterior-only build is unchanged: 310 objects, 119,436 triangles.
 
 **Warnings.** All 103 warnings of the full interior build also occur in the exterior-only build (109
 there; six Gallery / NorthPavN z-fights vanish because the gallery-deck stand-in is replaced by R4).
