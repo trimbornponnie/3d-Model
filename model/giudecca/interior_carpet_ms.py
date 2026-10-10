@@ -1139,6 +1139,15 @@ class HouseBase:
     def prism(self, elem, mat, s, d0, d1, Y0, Y1, z0, z1):
         I.prism(self.kit(elem, mat), self.rect(s, d0, d1, Y0, Y1), z0, z1)
 
+    def jamb_return(self, s, Y_w, z0, top):
+        """Corner block d D_CORE-LIN..D_CORE, Y Y_w..Y_w+LF where the opening's jamb lining
+        (facing -d) meets the end of the room's lining on the wall at Y = Y_w:
+        adhesive and insulation stacked like the jamb lining, the board wrapped
+        round both faces (jamb face and the room-side face at Y_w + LF)."""
+        bd = BU.LINING[-1][2] / M
+        self.strip(s, 'Y', D_CORE, -1, Y_w, Y_w + LF - bd, z0, top, BU.LINING)
+        self.strip(s, 'Y', D_CORE, -1, Y_w + LF - bd, Y_w + LF, z0, top, [('LiningBoard', 'M_PlasterInt', LIN)])
+
     # -------------------------------------------------------------- rooms
     def cell(self, s, d0, d1, Y0, Y1, zf, sides, floor, ceil, gaps=None, z0=None, soff=None):
         """A room (or part of one): floor layers inside the finished faces,
@@ -1524,7 +1533,7 @@ class HouseM(HouseBase):
         cell(s, D, dN, MSI0, MSI1, Z2, dict(N='L', S='L', A='O', O=tN), FL_INT, 'roofMS')
         # living | landing opening: the jamb lining returns round the corner over the end of the
         # living room's north lining; the beam's plaster above runs up to that return
-        self.strip(s, 'Y', D, -1, MSI0, MSI0 + LF, Z2, roof_ceiling('MS'), BU.LINING)
+        self.jamb_return(s, MSI0, Z2, roof_ceiling('MS'))
         self.strip(s, 'd', MSI0, 1, D_AX, D - LIN, Z_BEAM_M, roof_ceiling('MS'), PLASTER)
         cell(s, D_KIT, dN, MNI0, MNI1, Z2, dict(N='P', S='L', A='L', O=tN), FL_INT, 'roofMN', gaps=dict(A=[kd]))
 
@@ -1748,7 +1757,7 @@ class HouseS(HouseBase):
         cell(s, D, dN, SSI0, SSI1, Z0, dict(N='L', S='L', A='O', O=tN), FL_GF, 'flat', z0=GF_TOP)
         # core | living opening: the jamb lining returns round the corner over the end of the
         # living room's north lining
-        self.strip(s, 'Y', D, -1, SSI0, SSI0 + LF, Z0, S1 - 0.01, BU.LINING)
+        self.jamb_return(s, SSI0, Z0, S1 - 0.01)
         # ---- L1
         if self.campo:
             y_n, t_n = CSI, 'L'

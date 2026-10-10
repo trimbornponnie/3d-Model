@@ -1303,30 +1303,28 @@ class _Tower:
 
     # -------------------------------------------------------------- street door stops
     def street_door_stops(self, recs):
-        """Stops of the street door D3 ('PTE', joinery._street_door): the
-        leaf closes 3 mm clear of the posts and the transom and 8 mm over the
-        frame's bottom member, at their own depth with nothing behind, so a
-        2-3 mm through slit ran round the closed leaf (light leak into the
-        lobby). 12 x 12 stop beads on the inside of the posts and the transom
-        and a threshold bar, lapping the leaf's edges by 12 mm."""
+        """Stops of the street door D3 ('PTE' = joinery 'PT' with its own
+        frame depth, built by joinery._door_leaf: the 4-panel leaf fills the
+        frame's inner outline 3 mm clear of the jambs and the head and 8 mm
+        over the bottom member, within the frame's depth and with nothing
+        behind, so a through slit ran round the closed leaf - a light leak
+        into the lobby). 12 mm stop beads on the frame's inner face round
+        the jambs and the head and a threshold bar, lapping the leaf's edges
+        by 12 mm; they stay inside the reveal (the lobby plaster face is 15 mm
+        behind the frame)."""
         for r in recs:
             if J.classify(r) != 'PTE' or r['kind'] != 'rect':
                 continue
             sp = J.spec_for('PTE')
             fw, fd = sp['frame']
-            sw, sd = sp['sash']
             u0, u1, z0, z1 = J.dims(r)
-            zf = J.floor_of(z0)
-            ds = sp['frame_at'] + (fd - sd) / 2
-            um = (u0 + u1) / 2
-            a, b = um - 0.46, um + 0.46                         # leaf 0.92 between the posts
-            iz0, zt = z0 + fw, zf + 2.04
+            iu0, iu1, iz0, iz1 = u0 + fw, u1 - fw, z0 + fw, z1 - fw
+            d0, d1 = sp['frame_at'] + fd, sp['frame_at'] + fd + 0.012
             bm = self.kit('WindowFrames', sp['frame_mat'])
-            d0, d1 = ds + 0.056, ds + 0.068
-            I.face_box(bm, r, a - 0.05, a + 0.012, iz0, zt + 0.05, d0, d1)
-            I.face_box(bm, r, b - 0.012, b + 0.05, iz0, zt + 0.05, d0, d1)
-            I.face_box(bm, r, a + 0.012, b - 0.012, zt - 0.012, zt + 0.05, d0, d1)
-            I.face_box(bm, r, a + 0.012, b - 0.012, iz0, iz0 + 0.015, d0, d1)
+            I.face_box(bm, r, iu0 - 0.03, iu0 + 0.012, iz0, iz1 + 0.03, d0, d1)
+            I.face_box(bm, r, iu1 - 0.012, iu1 + 0.03, iz0, iz1 + 0.03, d0, d1)
+            I.face_box(bm, r, iu0 + 0.012, iu1 - 0.012, iz1 - 0.012, iz1 + 0.03, d0, d1)
+            I.face_box(bm, r, iu0 + 0.012, iu1 - 0.012, iz0, iz0 + 0.015, d0, d1)
 
     # -------------------------------------------------------------- radiator niches
     def niche_finishes(self, recs):
