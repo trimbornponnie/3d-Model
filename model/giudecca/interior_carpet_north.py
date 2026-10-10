@@ -153,7 +153,11 @@ def _register_types() -> None:
     """Local opening types (added to joinery.TYPES, the engine file is not
     edited): the portoncino in the 0.34 core wall with its own lintel (PN),
     the terrace door in the 0.30 L3 cross wall (DN)."""
-    J.TYPES.setdefault('PN', dict(J.TYPES['P'], lintel=False))
+    # PN: frame inner face on the lining board's back (0.34 - 0.010 - frame depth) so the
+    # lining's insulation / adhesive ends at the jambs and head sit behind the frame and only
+    # the 10 mm board shows as the reveal (frame_at STOP left 5 mm of insulation bare)
+    J.TYPES.setdefault('PN', dict(J.TYPES['P'], lintel=False,
+                                  frame_at=0.34 - BU.LINING[-1][2] - J.TYPES['P'].get('frame', J.BASE['frame'])[1]))
     J.TYPES.setdefault('N_E1P', dict(J.TYPES['E1'], lintel=False, board=False))   # a light of a two-light pair
     J.TYPES.setdefault('N_E', dict(J.TYPES['E'], board=False))                   # finestra tipo, own sill / board
     J.TYPES.setdefault('DN', dict(jamb='plain', door=True, leaves=1, bottom_rail=0.150, board=False,
@@ -1592,6 +1596,14 @@ class House:
             wall_layer += [(L, z0), (L, z1), (0.0, z1)]
             I.oprism(kit(f'Wall{elem}', mat), A, B, wall_layer, t, t + th)
             t += th
+        # the N-pav corner piers (inner faces D_ENT) stand 17.5 mm proud of the core-wall
+        # linings (faces D_CORE - LIN): a board returns across each pier's end, from the core
+        # lining's face to the pier face, between the parquet and the ceiling plaster (its own
+        # element: it meets the board layers along edges, which the linings' cut would fuse)
+        BT = BU.LINING[-1][2]
+        for sg in (-1, 1):
+            I.prism(kit('WallLiningReturn', 'M_PlasterInt'), self.rect(sg, D_CORE - LIN, D_ENT, YN1, YN1 + BT / M),
+                    Z1, SOFF[Z1] - 0.01)
         for (lc, lw) in lint:
             I.oprism(kit('EntranceLintel', 'M_Concrete'), A, B,
                      [(lc - lw / 2, hd), (lc + lw / 2, hd), (lc + lw / 2, hd + lh), (lc - lw / 2, hd + lh)], 0.0, tb * M)

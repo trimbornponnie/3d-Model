@@ -697,13 +697,28 @@ def _copper(ctx):
             m = 2 * n
             top = [(xa - CORE_IN + 2 * CORE_IN * k / m, _vault_z(-CORE_IN + 2 * CORE_IN * k / m)) for k in range(m + 1)]
             geo.add_prism_y(bm, top + [(x, z - 0.001) for x, z in reversed(top)], y0, y1)
+            # the flashing (below) gets a flat 1 mm strip from the arc's crossing of its top
+            # (5.495, +-1.59) over the sheet's drop into the gutter: the outer roof surface stays
+            # that of the exterior-only build (flat from the arc to the eave) and the core wall
+            # top is enclosed; 5.494 -> 5.495 so it clears interior_schiera's VaultTimber (top =
+            # the sheet's underside)
+            z5 = EAVE + 0.005
+            dxc = next(((x0 - xa) + (z0 - z5) / (z0 - z1) * (x1 - x0)
+                        for (x0, z0), (x1, z1) in zip(top, top[1:]) if x0 >= xa and z0 >= z5 > z1), fi)
         else:
             arc = [(xa - h + 2 * h * k / n, _vault_z(-h + 2 * h * k / n)) for k in range(1, n)]
             geo.add_prism_y(bm, [(xa - h, zb), (xa + h, zb)] + list(reversed(arc)), y0, y1)
         # copper flashings on the core walls: the eave line at 5.49 (SE 59 "scossalina in rame")
         for s in (-1, 1):
-            xa_, xb_ = xa + s * (CORE_IN - 0.003 if interiors else fi), xa + s * (CORE_HW + fo)
-            _box(bm, min(xa_, xb_), max(xa_, xb_), y0, y1, EAVE - ft + 0.005, EAVE + 0.005)
+            if interiors:
+                # one L-shaped profile (one shell, no edge shared with the strip): the strip
+                # from the arc crossing over the sheet, the flashing box from the wall's inner face
+                xi, xs_, xo = xa + s * dxc, xa + s * (CORE_IN - 0.003), xa + s * (CORE_HW + fo)
+                geo.add_prism_y(bm, [(xi, z5 - 0.001), (xi, z5), (xo, z5), (xo, EAVE - ft + 0.005),
+                                     (xs_, EAVE - ft + 0.005), (xs_, z5 - 0.001)], y0, y1)
+            else:
+                xa_, xb_ = xa + s * fi, xa + s * (CORE_HW + fo)
+                _box(bm, min(xa_, xb_), max(xa_, xb_), y0, y1, EAVE - ft + 0.005, EAVE + 0.005)
         # twin flue pipes on the party axis against the bar's south wall (spec 9, n5, n39)
         yc = yY(Y_BAR) - FLUE['dy']
         for s in (-1, 1):

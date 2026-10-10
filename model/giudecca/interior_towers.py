@@ -832,6 +832,7 @@ class _Tower:
         # object keeps the material of the first opening that names it (cream M_Joinery)
         J.build_openings(self.kit, [r for r in recs if J.classify(r) == 'K'], prefix='StairWindow')
         J.build_openings(self.kit, recs)
+        self.street_door_stops(recs)
         self.window_handles(recs)
         self.niche_finishes(recs)
         objs = self.kit.flush()
@@ -1182,6 +1183,35 @@ class _Tower:
             bot = [(v, t.copper_under(v) - dz - th) for v in reversed(xs)]
             geo.add_prism_y(kit(prefix + elem, mat), top + bot, y0, y1)
             dz += th
+        # both ends of the vault lining stop on the L3 strip openings (E_P2 -> E_IW, head
+        # Z_BEAM3): where the vault ceiling runs below that head (the low side of the arc)
+        # the insulation / adhesive / slab ends would show from the opening - a plaster board
+        # return closes them, from the lining's underside up to the head
+        bd = kit('CeilingLiningBoard', 'M_PlasterInt')
+        lo, hi = sorted((xE(E_IW), xE(E_P2)))
+        pts = [(v, t.vault_ceil(v)) for v in [lo] + [v for v in xs if lo + 1e-6 < v < hi - 1e-6] + [hi]]
+        runs, run = [], []
+        for (xa, za), (xb, zb) in zip(pts, pts[1:]):
+            ina, inb = za < Z_BEAM3 - 1e-4, zb < Z_BEAM3 - 1e-4
+            if ina and not run:
+                run = [(xa, za)]
+            if ina != inb:
+                xc = xa + (Z_BEAM3 - za) / (zb - za) * (xb - xa)
+                run.append((xc, Z_BEAM3))
+                if ina:
+                    runs.append(run)
+                    run = []
+            elif inb:
+                run.append((xb, zb))
+        if run:
+            runs.append(run)
+        for run in runs:
+            # top edge at the head, then the lining underside back (crossing points sit on the head)
+            poly = [(run[0][0], Z_BEAM3), (run[-1][0], Z_BEAM3)] + \
+                   [p for p in reversed(run) if p[1] < Z_BEAM3 - 1e-6]
+            for s in (-1, 1):
+                ya, yb = sorted((t.y(s * D_MID), t.y(s * (D_MID + 0.012))))
+                geo.add_prism_y(bd, poly, ya, yb)
 
     # -------------------------------------------------------------- common stair
     def hall_stair(self):
@@ -1270,6 +1300,33 @@ class _Tower:
             zh = (iz0 + iz1) / 2
             I.face_box(bm, r, uh - 0.012, uh + 0.012, zh - 0.07, zh + 0.07, ds + sd, ds + sd + 0.012)
             I.face_box(bm, r, uh - 0.012, uh + 0.012, zh - 0.10, zh + 0.012, ds + sd + 0.012, ds + sd + 0.06)
+
+    # -------------------------------------------------------------- street door stops
+    def street_door_stops(self, recs):
+        """Stops of the street door D3 ('PTE', joinery._street_door): the
+        leaf closes 3 mm clear of the posts and the transom and 8 mm over the
+        frame's bottom member, at their own depth with nothing behind, so a
+        2-3 mm through slit ran round the closed leaf (light leak into the
+        lobby). 12 x 12 stop beads on the inside of the posts and the transom
+        and a threshold bar, lapping the leaf's edges by 12 mm."""
+        for r in recs:
+            if J.classify(r) != 'PTE' or r['kind'] != 'rect':
+                continue
+            sp = J.spec_for('PTE')
+            fw, fd = sp['frame']
+            sw, sd = sp['sash']
+            u0, u1, z0, z1 = J.dims(r)
+            zf = J.floor_of(z0)
+            ds = sp['frame_at'] + (fd - sd) / 2
+            um = (u0 + u1) / 2
+            a, b = um - 0.46, um + 0.46                         # leaf 0.92 between the posts
+            iz0, zt = z0 + fw, zf + 2.04
+            bm = self.kit('WindowFrames', sp['frame_mat'])
+            d0, d1 = ds + 0.056, ds + 0.068
+            I.face_box(bm, r, a - 0.05, a + 0.012, iz0, zt + 0.05, d0, d1)
+            I.face_box(bm, r, b - 0.012, b + 0.05, iz0, zt + 0.05, d0, d1)
+            I.face_box(bm, r, a + 0.012, b - 0.012, zt - 0.012, zt + 0.05, d0, d1)
+            I.face_box(bm, r, a + 0.012, b - 0.012, iz0, iz0 + 0.015, d0, d1)
 
     # -------------------------------------------------------------- radiator niches
     def niche_finishes(self, recs):

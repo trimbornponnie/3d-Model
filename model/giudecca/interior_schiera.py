@@ -850,7 +850,9 @@ def _dwelling(kit, dw: Dw):
     tops = [(0.0, CEIL_BAR(xp, yY(Y_NI))), (Lp, CEIL_BAR(xp, yY(Y_BI)))]
     _wall(kit, a_, b_, _notched(Lp, SLAB_TOP, tops, [(d0, d1, DOOR_HEAD)]), PARTITION_10, 'Partition')
     hinge, swing = _door_cfg(a_, b_, d1, dw.p(3.0, 30.0))
-    I.door(kit, a_, b_, (d0 + d1) / 2, d1 - d0, DOOR_HEAD, T1, DOOR_T, hinge, swing, 90.0)
+    # parked at 60 deg: at 90 deg the leaf lies along the bar's south wall 0.23 in front of the
+    # terrace door and laps its opening by 0.15 (hinge at the south jamb per the n45 arcs)
+    I.door(kit, a_, b_, (d0 + d1) / 2, d1 - d0, DOOR_HEAD, T1, DOOR_T, hinge, swing, 60.0)
     a_, b_ = dw.p(U_PW, Y_BATH), dw.p(U_PART[0], Y_BATH)
     Lb = U_PART[0] - U_PW
     zt = CEIL_BAR(dw.x(1.0), yY(yb1))
